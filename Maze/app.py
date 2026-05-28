@@ -1,4 +1,3 @@
-# Tên file: app.py (hoặc maze_app.py)
 import tkinter as tk
 from tkinter import ttk
 import copy  # Thư viện dùng để copy ma trận gốc
