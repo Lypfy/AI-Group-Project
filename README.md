@@ -14,3 +14,6 @@ self.algorithms = {
     "Depth-First Search (DFS)": DFS # <--- THÊM DÒNG NÀY LÀ XONG 
 }
 \`\`\`
+
+# Add new map 
+Vào trong map.py để thêm map level mới cho màn mới
