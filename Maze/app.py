@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-import copy  # Thư viện dùng để copy ma trận gốc
+import copy
+import time 
 
 from map import MAPS
 from bfs import BFS 
@@ -270,13 +271,23 @@ class MazeApp:
 
         algo_name = self.selected_algo.get()
         self.log(f"Đang chạy {algo_name}...")
-        self.status_label.config(text=f"Đang xử lý...", fg="#f9e2af")
+        self.status_label.config(text="Đang xử lý...", fg="#f9e2af")
 
+        # --- BẮT ĐẦU BẤM GIỜ ---
+        start_time = time.perf_counter()
+        
         # Gọi hàm solve() của thuật toán
         node = self.maze_logic.solve()
+        
+        # --- KẾT THÚC BẤM GIỜ ---
+        end_time = time.perf_counter()
+        
+        # Tính toán thời gian (đổi ra mili-giây)
+        thinking_time_ms = (end_time - start_time) * 1000
 
         if node is None:
-            self.log("!!! Không thể tìm thấy đường đi tới đích!")
+            self.log(f"!!! Không thể tìm thấy đường đi tới đích!")
+            self.log(f"⏱ Thời gian tính toán: {thinking_time_ms:.2f} ms")
             self.status_label.config(text="Thất bại: Không có đường đi", fg="#f38ba8")
             return
 
@@ -301,8 +312,16 @@ class MazeApp:
         self.step_idx = 0
         self.is_running = True
 
-        self.log(f"Tìm thấy đường đi! (Số bước: {len(actions)})")
-        self.status_label.config(text="Đang di chuyển...", fg="#89b4fa")
+        # --- HIỂN THỊ KẾT QUẢ THỜI GIAN LÊN GIAO DIỆN ---
+        self.log(f"⏱ Thời gian suy nghĩ: {thinking_time_ms:.2f} ms")
+        self.log(f"🚩 Tìm thấy đường đi! (Số bước: {len(actions)})")
+        
+        self.status_label.config(
+            text=f"Đang di chuyển... (Nghĩ mất: {thinking_time_ms:.2f} ms)", 
+            fg="#89b4fa"
+        )
+        # ------------------------------------------------
+
         self.animate_step()
 
     def animate_step(self):
