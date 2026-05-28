@@ -1,4 +1,5 @@
 # AI-Group-Project
+<img width="200" height="200" alt="Maze" src="https://github.com/user-attachments/assets/471dbea0-c3bb-44d5-9d83-17ff9376a5fc" />
 
 # Add new algorithm vào trong app.py (Ex: DFS)
 Thêm dòng này ở đầu file `app.py`:
