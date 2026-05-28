@@ -1,24 +1,34 @@
-# Giao diện demo
-
+# Tên file: maze_app.py
 import tkinter as tk
 from tkinter import ttk
 from bfs import BFS 
+from aStar import AStar # THÊM DÒNG NÀY: Import class AStar của bạn
 
 class MazeApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Maze Solver AI - 20x20 BFS")
+        self.root.title("Maze Solver AI - 20x20")
         self.root.geometry("1100x650")
         self.root.configure(bg="#1e1e2e")
 
         # =========================
+        # 1. QUẢN LÝ THUẬT TOÁN (THÊM MỚI)
+        # =========================
+        # Chỉ cần thêm thuật toán mới vào dictionary này, UI sẽ tự động cập nhật
+        self.algorithms = {
+            "Breadth-First Search (BFS)": BFS,
+            "A* Search (A-Star)": AStar
+        }
+        self.selected_algo = tk.StringVar(value="Breadth-First Search (BFS)") # Mặc định
+
+        # =========================
         # VARIABLES
         # =========================
-        self.maze_logic = BFS()  
+        self.maze_logic = None 
         self.path = []
         self.step_idx = 0
         self.is_running = False
-        self.goal_pos = (19, 19)   # Cập nhật tọa độ đích mới
+        self.goal_pos = (19, 19)
 
         # =========================
         # SETUP UI
@@ -26,8 +36,7 @@ class MazeApp:
         self.setup_style()
         self.setup_ui()
         
-        initial_matrix = self.maze_logic.frontier[0].state
-        self.draw_grid(initial_matrix)
+        self.reset_app() # Gọi reset_app ngay từ đầu để khởi tạo thuật toán mặc định
 
     def setup_style(self):
         self.style = ttk.Style()
@@ -35,11 +44,14 @@ class MazeApp:
         self.style.configure(
             "TButton", font=("Segoe UI", 11, "bold"), padding=10
         )
+        self.style.configure(
+            "TCombobox", font=("Segoe UI", 10), padding=5
+        )
 
     def setup_ui(self):
         # TITLE
         title = tk.Label(
-            self.root, text="🧭 20x20 Maze Solver AI (BFS)", bg="#1e1e2e", fg="white", font=("Segoe UI", 22, "bold")
+            self.root, text="🧭 20x20 Maze Solver AI", bg="#1e1e2e", fg="white", font=("Segoe UI", 22, "bold")
         )
         title.pack(pady=10)
 
@@ -54,10 +66,20 @@ class MazeApp:
             self.left_frame, text="Điều khiển", bg="#313244", fg="white", font=("Segoe UI", 15, "bold")
         ).pack(pady=15)
 
+        # 2. THÊM COMBOBOX CHỌN THUẬT TOÁN VÀO UI
         tk.Label(
-            self.left_frame, text="Thuật toán hiện tại:\nBreadth-First Search\n(Ma trận 20x20)", 
-            bg="#313244", fg="#89b4fa", font=("Segoe UI", 11, "italic"), justify="center"
-        ).pack(pady=5)
+            self.left_frame, text="Chọn thuật toán:", 
+            bg="#313244", fg="#89b4fa", font=("Segoe UI", 11, "bold")
+        ).pack(pady=(5, 0))
+
+        self.algo_combo = ttk.Combobox(
+            self.left_frame, 
+            textvariable=self.selected_algo, 
+            values=list(self.algorithms.keys()), 
+            state="readonly"
+        )
+        self.algo_combo.pack(pady=10, padx=15, fill="x")
+        self.algo_combo.bind("<<ComboboxSelected>>", lambda e: self.reset_app()) # Đổi thuật toán thì reset lại map
 
         self.run_btn = ttk.Button(self.left_frame, text="▶ RUN", command=self.run_algorithm)
         self.run_btn.pack(pady=30, padx=15, fill="x")
@@ -82,7 +104,7 @@ class MazeApp:
         self.progress = ttk.Progressbar(self.center_frame, length=400, mode="determinate")
         self.progress.pack(pady=10)
 
-        # SOLUTION FRAME
+        # SOLUTION FRAME (Giữ nguyên)
         solution_frame = tk.Frame(self.center_frame, bg="#1e1e2e")
         solution_frame.pack(fill="x", padx=20, pady=5)
 
@@ -107,7 +129,7 @@ class MazeApp:
             10, 22, anchor="w", text="Chưa có", fill="#89b4fa", font=("Consolas", 11, "bold")
         )
 
-        # RIGHT PANEL
+        # RIGHT PANEL (Giữ nguyên)
         self.right_frame = tk.Frame(main_frame, bg="#313244", width=250)
         self.right_frame.pack(side="right", fill="y", padx=10, pady=10)
 
@@ -118,14 +140,12 @@ class MazeApp:
         self.log_text = tk.Text(self.right_frame, bg="#181825", fg="white", font=("Consolas", 10))
         self.log_text.pack(fill="both", expand=True, padx=10, pady=10)
 
-    # =========================
-    # VẼ MÊ CUNG LÊN CANVAS
-    # =========================
+    # VẼ MÊ CUNG LÊN CANVAS (Giữ nguyên)
     def draw_grid(self, matrix):
         self.canvas.delete("all")
         rows = len(matrix)
         cols = len(matrix[0])
-        cell_size = 500 // cols  # Sẽ tự động tính ra 500 // 20 = 25 pixel mỗi ô
+        cell_size = 500 // cols
 
         for i in range(rows):
             for j in range(cols):
@@ -151,10 +171,9 @@ class MazeApp:
                     text_char = "🏁"
 
                 self.canvas.create_rectangle(
-                    x1, y1, x2, y2, fill=color, outline="#11111b", width=1 # Giảm nét viền xuống 1 pixel cho thanh thoát
+                    x1, y1, x2, y2, fill=color, outline="#11111b", width=1
                 )
                 
-                # Điều chỉnh giảm kích thước font chữ xuống cỡ 13 để vừa ô 25x25
                 if text_char:
                     self.canvas.create_text(
                         x1 + cell_size // 2, y1 + cell_size // 2, text=text_char, font=("Arial", 13)
@@ -168,9 +187,10 @@ class MazeApp:
         if self.is_running:
             return
 
-        self.reset_app() 
-        self.log("Running BFS on 20x20 Maze...")
-        self.status_label.config(text="Đang chạy thuật toán BFS")
+        # 3. LẤY TÊN THUẬT TOÁN ĐỂ GHI LOG
+        algo_name = self.selected_algo.get()
+        self.log(f"Running {algo_name} on 20x20 Maze...")
+        self.status_label.config(text=f"Đang chạy {algo_name}")
 
         node = self.maze_logic.solve()
 
@@ -210,7 +230,6 @@ class MazeApp:
             self.progress["value"] = self.step_idx + 1
             self.step_idx += 1
 
-            # Rút ngắn thời gian delay xuống 150ms để robot chạy nhanh hơn trên map lớn
             self.root.after(150, self.animate_step) 
         else:
             self.status_label.config(text="✔ Hoàn thành", fg="#a6e3a1")
@@ -228,9 +247,17 @@ class MazeApp:
         self.progress["value"] = 0
         self.status_label.config(text="Trạng thái: Sẵn sàng", fg="#a6e3a1")
 
-        self.maze_logic = BFS()
+        # =========================
+        # 4. KHỞI TẠO ĐỘNG THUẬT TOÁN TỪ COMBOBOX
+        # =========================
+        algo_name = self.selected_algo.get()          # Lấy tên đang chọn (vd: "A* Search (A-Star)")
+        AlgoClass = self.algorithms[algo_name]        # Ánh xạ từ string ra Class (vd: AStar)
+        self.maze_logic = AlgoClass()                 # Khởi tạo object mới: self.maze_logic = AStar()
+
+        # Lấy trạng thái khởi đầu để vẽ lại map
         initial_matrix = self.maze_logic.frontier[0].state
         self.draw_grid(initial_matrix)
+        self.log(f"Đã tải xong: {algo_name}")
 
 if __name__ == "__main__":
     root = tk.Tk()
