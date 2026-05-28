@@ -16,4 +16,4 @@ self.algorithms = {
 \`\`\`
 
 # Add new map 
-Vào trong map.py để thêm map level mới cho màn mới
+Vào trong map.py để thêm map level mới cho màn mới + hint, sau đó cập nhật dictionary MAPS
