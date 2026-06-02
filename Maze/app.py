@@ -7,7 +7,7 @@ import time
 from map import MAPS
 from bfs import BFS
 from aStar import AStar
-
+from dfs import DFS
 
 class MazeApp:
 
@@ -59,6 +59,7 @@ class MazeApp:
 
         self.algorithms = {
             "Breadth-First Search (BFS)": BFS,
+            "Depth-First Search (DFS)": DFS,
             "A* Search (A-Star)": AStar
         }
 
@@ -716,6 +717,10 @@ class MazeApp:
                         color = "#f9e2af" 
                         # Hiển thị icon dấu chân thay vì vẽ hình tròn
                         text_char = "🐾"
+
+                    elif value == 8:
+                        color = "#f38ba8"
+                        text_char = "❌"
 
                     if (
                         (i, j) == self.goal_pos
