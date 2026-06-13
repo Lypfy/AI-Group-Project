@@ -7,6 +7,7 @@ from algorithms.uninformed.bfs import BFS
 from algorithms.informed.aStar import AStar
 from algorithms.uninformed.dfs import DFS
 from algorithms.informed.gbfs import GBFS
+from algorithms.local.simulated_annealing import SimulatedAnnealing
 
 
 class MazeApp:
@@ -40,7 +41,12 @@ class MazeApp:
             "Depth-First Search (DFS)": DFS,
             "A* Search (A-Star)": AStar,
             "Greedy Best-First Search (GBFS)": GBFS,
+            "Simulated Annealing (SA)": SimulatedAnnealing,
         }
+        # SA params
+        self.sa_T0    = tk.DoubleVar(value=100.0)
+        self.sa_Tmin  = tk.DoubleVar(value=0.1)
+        self.sa_alpha = tk.DoubleVar(value=0.99)
         self.selected_algo = tk.StringVar(value="Breadth-First Search (BFS)")
         # =========================
         # INIT UI
@@ -143,7 +149,7 @@ class MazeApp:
             width=22,
         )
         self.algo_combo.pack(pady=5, padx=15, fill="x")
-        self.algo_combo.bind("<<ComboboxSelected>>", lambda e: self.reset_app())
+        self.algo_combo.bind("<<ComboboxSelected>>", lambda e: self._on_algo_change())
         # =========================
         # HINT
         # =========================
@@ -181,6 +187,37 @@ class MazeApp:
             self.left_frame, text="⏸ DỪNG", command=self.toggle_pause
         )
         self.pause_btn.pack(pady=5, padx=15, fill="x")
+        # =========================
+        # SA PARAMS (ẩn/hiện)
+        # =========================
+        self.sa_frame = tk.Frame(self.left_frame, bg="#313244")
+        self.sa_frame.pack(fill="x", padx=15, pady=(10, 0))
+
+        tk.Label(
+            self.sa_frame,
+            text="⚙ Tham số Simulated Annealing",
+            bg="#313244",
+            fg="#fab387",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(anchor="w", pady=(0, 4))
+
+        def _sa_param_row(label, var, from_, to, resolution, color):
+            row = tk.Frame(self.sa_frame, bg="#313244")
+            row.pack(fill="x", pady=1)
+            tk.Label(row, text=label, bg="#313244", fg=color,
+                     font=("Segoe UI", 9), width=18, anchor="w").pack(side="left")
+            tk.Label(row, textvariable=var, bg="#313244", fg="#f9e2af",
+                     font=("Consolas", 9, "bold"), width=6).pack(side="right")
+            tk.Scale(self.sa_frame, variable=var, from_=from_, to=to,
+                     resolution=resolution, orient="horizontal",
+                     bg="#313244", fg="white", troughcolor="#181825",
+                     highlightthickness=0, showvalue=False).pack(fill="x")
+
+        _sa_param_row("T₀  (nhiệt ban đầu)",    self.sa_T0,    10,  500,  10,    "#fab387")
+        _sa_param_row("T_min (nhiệt tối thiểu)", self.sa_Tmin,  0.01, 5,   0.01,  "#f38ba8")
+        _sa_param_row("α  (hệ số làm lạnh)",     self.sa_alpha, 0.80, 0.999, 0.001, "#94e2d5")
+
+        self.sa_frame.pack_forget()   # ẩn mặc định
         # =========================
         # SPEED CONTROL
         # =========================
@@ -439,6 +476,18 @@ class MazeApp:
     # =====================================================
     # RESET
     # =====================================================
+    def _is_sa(self):
+        return self.selected_algo.get() == "Simulated Annealing (SA)"
+
+    def _on_algo_change(self):
+        """Hiện/ẩn SA params frame khi đổi thuật toán."""
+        if self._is_sa():
+            self.sa_frame.pack(fill="x", padx=15, pady=(10, 0),
+                               before=self.speed_slider.master)  # trước speed frame
+        else:
+            self.sa_frame.pack_forget()
+        self.reset_app()
+
     def reset_app(self):
         self.is_running = False
         self.is_paused = False
@@ -467,11 +516,22 @@ class MazeApp:
         self.goal_pos = (goal_x, goal_y)
         algo_name = self.selected_algo.get()
         AlgoClass = self.algorithms[algo_name]
-        self.maze_logic = AlgoClass(initial_maze=current_map, goal=self.goal_pos)
+        if self._is_sa():
+            self.maze_logic = AlgoClass(
+                initial_maze=current_map,
+                goal=self.goal_pos,
+                T0=self.sa_T0.get(),
+                Tmin=self.sa_Tmin.get(),
+                alpha=self.sa_alpha.get(),
+            )
+        else:
+            self.maze_logic = AlgoClass(initial_maze=current_map, goal=self.goal_pos)
         self.draw_grid(current_map)
         self.log(f"Đã tải {level_name}", "success")
         self.log(f"Điểm đích: {self.goal_pos}", "info")
         self.log(f"Thuật toán: {algo_name}", "warning")
+        if self._is_sa():
+            self.log(f"  T₀={self.sa_T0.get()}, α={self.sa_alpha.get()}, T_min={self.sa_Tmin.get()}", "info")
 
     def animate_search(self):
         if not self.is_running:
@@ -481,13 +541,22 @@ class MazeApp:
             return
         if self.search_idx < len(self.search_frames):
             frame_data = self.search_frames[self.search_idx]
-            if isinstance(frame_data, tuple):
+            if self._is_sa():
+                # SA: (matrix, T, deltaE, prob, accepted)
+                matrix, T, deltaE, prob, accepted = frame_data
+                sign = "✅" if accepted else "❌"
+                self.visited_label.config(text=f"T: {T:.3f}")
+                self.frontier_label.config(
+                    text=f"ΔE: {deltaE:+.2f}",
+                    fg="#a6e3a1" if deltaE < 0 else "#f38ba8")
+                self.path_label.config(text=f"P: {prob:.3f} {sign}")
+            elif isinstance(frame_data, tuple):
                 matrix, visited_count, frontier_count = frame_data
                 self.visited_label.config(text=f"Visited: {visited_count}")
                 self.frontier_label.config(text=f"Frontier: {frontier_count}")
             else:
                 matrix = frame_data
-            
+
             self.draw_grid(matrix)
             self.search_idx += 1
             self.root.after(self.speed_var.get(), self.animate_search)

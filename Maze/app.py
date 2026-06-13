@@ -8,6 +8,7 @@ from map import MAPS
 from bfs import BFS
 from aStar import AStar
 from dfs import DFS
+from simulated_annealing import SimulatedAnnealing
 
 class MazeApp:
 
@@ -60,8 +61,14 @@ class MazeApp:
         self.algorithms = {
             "Breadth-First Search (BFS)": BFS,
             "Depth-First Search (DFS)": DFS,
-            "A* Search (A-Star)": AStar
+            "A* Search (A-Star)": AStar,
+            "Simulated Annealing (SA)": SimulatedAnnealing,
         }
+
+        # SA params
+        self.sa_T0    = tk.DoubleVar(value=100.0)
+        self.sa_Tmin  = tk.DoubleVar(value=0.1)
+        self.sa_alpha = tk.DoubleVar(value=0.99)
 
         self.selected_algo = tk.StringVar(
             value="Breadth-First Search (BFS)"
@@ -140,21 +147,72 @@ class MazeApp:
         )
 
         # =====================================================
-        # LEFT PANEL
+        # LEFT PANEL (scrollable)
         # =====================================================
 
-        self.left_frame = tk.Frame(
+        self.left_outer = tk.Frame(
             main_frame,
             bg="#313244",
-            width=250
+            width=265
         )
 
-        self.left_frame.pack(
+        self.left_outer.pack(
             side="left",
             fill="y",
             padx=10,
             pady=10
         )
+
+        self.left_outer.pack_propagate(False)
+
+        self.left_canvas = tk.Canvas(
+            self.left_outer,
+            bg="#313244",
+            highlightthickness=0
+        )
+
+        self.left_scroll = ttk.Scrollbar(
+            self.left_outer,
+            orient="vertical",
+            command=self.left_canvas.yview
+        )
+
+        self.left_canvas.configure(
+            yscrollcommand=self.left_scroll.set
+        )
+
+        self.left_scroll.pack(side="right", fill="y")
+        self.left_canvas.pack(side="left", fill="both", expand=True)
+
+        self.left_frame = tk.Frame(self.left_canvas, bg="#313244")
+
+        self._left_win = self.left_canvas.create_window(
+            (0, 0), window=self.left_frame, anchor="nw"
+        )
+
+        # Cập nhật scrollregion khi nội dung thay đổi
+        self.left_frame.bind(
+            "<Configure>",
+            lambda e: self.left_canvas.configure(
+                scrollregion=self.left_canvas.bbox("all")
+            )
+        )
+
+        # Stretch frame theo chiều ngang canvas
+        self.left_canvas.bind(
+            "<Configure>",
+            lambda e: self.left_canvas.itemconfig(
+                self._left_win, width=e.width
+            )
+        )
+
+        # Mouse wheel scroll
+        def _on_mousewheel(event):
+            self.left_canvas.yview_scroll(
+                int(-1 * (event.delta / 120)), "units"
+            )
+
+        self.left_outer.bind_all("<MouseWheel>", _on_mousewheel)
 
         tk.Label(
             self.left_frame,
@@ -231,7 +289,7 @@ class MazeApp:
 
         self.algo_combo.bind(
             "<<ComboboxSelected>>",
-            lambda e: self.reset_app()
+            lambda e: self._on_algo_change()
         )
 
         # =========================
@@ -307,7 +365,7 @@ class MazeApp:
             padx=15,
             fill="x"
         )
-        
+
         # =========================
         # SPEED CONTROL
         # =========================
@@ -351,6 +409,39 @@ class MazeApp:
         )
 
         self.speed_slider.pack(fill="x")
+
+        # =========================
+        # SA PARAMS (ẩn/hiện)
+        # =========================
+
+        self.sa_frame = tk.Frame(self.left_frame, bg="#313244")
+        self.sa_frame.pack(fill="x", padx=15, pady=(10, 0))
+
+        tk.Label(
+            self.sa_frame,
+            text="⚙ Tham số Simulated Annealing",
+            bg="#313244",
+            fg="#fab387",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(anchor="w", pady=(0, 4))
+
+        def _sa_param_row(label, var, from_, to, resolution, color):
+            row = tk.Frame(self.sa_frame, bg="#313244")
+            row.pack(fill="x", pady=1)
+            tk.Label(row, text=label, bg="#313244", fg=color,
+                     font=("Segoe UI", 9), width=18, anchor="w").pack(side="left")
+            tk.Label(row, textvariable=var, bg="#313244", fg="#f9e2af",
+                     font=("Consolas", 9, "bold"), width=6).pack(side="right")
+            tk.Scale(self.sa_frame, variable=var, from_=from_, to=to,
+                     resolution=resolution, orient="horizontal",
+                     bg="#313244", fg="white", troughcolor="#181825",
+                     highlightthickness=0, showvalue=False).pack(fill="x")
+
+        _sa_param_row("T₀  (nhiệt ban đầu)",     self.sa_T0,    10,  500,  10,    "#fab387")
+        _sa_param_row("T_min (nhiệt tối thiểu)",  self.sa_Tmin,  0.01, 5,   0.01,  "#f38ba8")
+        _sa_param_row("α  (hệ số làm lạnh)",      self.sa_alpha, 0.80, 0.999, 0.001, "#94e2d5")
+
+        self.sa_frame.pack_forget()   # ẩn mặc định
 
         # =====================================================
         # CENTER PANEL
@@ -767,9 +858,16 @@ class MazeApp:
 
         self.log_text.see(tk.END)
 
-    # =====================================================
-    # RESET
-    # =====================================================
+    def _is_sa(self):
+        return self.selected_algo.get() == "Simulated Annealing (SA)"
+
+    def _on_algo_change(self):
+        """Hiện/ẩn SA params frame khi đổi thuật toán."""
+        if self._is_sa():
+            self.sa_frame.pack(fill="x", padx=15, pady=(10, 0))
+        else:
+            self.sa_frame.pack_forget()
+        self.reset_app()
 
     def reset_app(self):
 
@@ -848,10 +946,19 @@ class MazeApp:
 
         AlgoClass = self.algorithms[algo_name]
 
-        self.maze_logic = AlgoClass(
-            initial_maze=current_map,
-            goal=self.goal_pos
-        )
+        if self._is_sa():
+            self.maze_logic = AlgoClass(
+                initial_maze=current_map,
+                goal=self.goal_pos,
+                T0=self.sa_T0.get(),
+                Tmin=self.sa_Tmin.get(),
+                alpha=self.sa_alpha.get(),
+            )
+        else:
+            self.maze_logic = AlgoClass(
+                initial_maze=current_map,
+                goal=self.goal_pos
+            )
 
         self.draw_grid(current_map)
 
@@ -870,6 +977,12 @@ class MazeApp:
             "warning"
         )
 
+        if self._is_sa():
+            self.log(
+                f"  T₀={self.sa_T0.get()}, α={self.sa_alpha.get()}, T_min={self.sa_Tmin.get()}",
+                "info"
+            )
+
     def animate_search(self):
 
         if self.is_paused:
@@ -877,7 +990,19 @@ class MazeApp:
 
         if self.search_idx < len(self.search_frames):
 
-            matrix = self.search_frames[self.search_idx]
+            frame_data = self.search_frames[self.search_idx]
+
+            if self._is_sa():
+                # SA history: (matrix, T, deltaE, prob, accepted)
+                matrix, T, deltaE, prob, accepted = frame_data
+                sign = "✅" if accepted else "❌"
+                self.visited_label.config(text=f"T: {T:.3f}")
+                self.frontier_label.config(
+                    text=f"ΔE: {deltaE:+.2f}",
+                    fg="#a6e3a1" if deltaE < 0 else "#f38ba8")
+                self.path_label.config(text=f"P: {prob:.3f} {sign}")
+            else:
+                matrix = frame_data
 
             self.draw_grid(matrix)
 
