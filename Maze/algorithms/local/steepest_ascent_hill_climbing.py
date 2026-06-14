@@ -1,7 +1,3 @@
-import random
-import math
-
-
 class Node:
     def __init__(self, state, parent, act, cost_path):
         self.state = state
@@ -10,27 +6,19 @@ class Node:
         self.cost_path = cost_path
 
 
-class SimulatedAnnealing:
+class SteepestAscentHillClimbing:
     """
-    Simulated Annealing cho bài toán tìm đường trong mê cung.
+    Steepest Ascent Hill Climbing cho bài toán tìm đường trong mê cung.
 
     search_history: list of tuple
-        (matrix_snapshot, T, deltaE, prob, accepted)
-        - matrix_snapshot : ma trận trạng thái tại bước đó
-        - T               : nhiệt độ hiện tại
-        - deltaE          : chênh lệch heuristic (next - current)
-        - prob            : xác suất chấp nhận trạng thái tệ hơn
-        - accepted        : True nếu bước được chấp nhận
+        (matrix_snapshot, step_count, current_cost)
     """
 
-    def __init__(self, initial_maze, goal=(19, 19), T0=100.0, Tmin=0.1, alpha=0.99):
+    def __init__(self, initial_maze, goal=(19, 19)):
         self.goal = goal
         self.initial_maze = [row[:] for row in initial_maze]
         self.start_node = Node(initial_maze, None, "START", self._manhattan(initial_maze))
         self.search_history = []
-        self.T0 = T0
-        self.Tmin = Tmin
-        self.alpha = alpha
 
     # ─────────────────────────────────────────────
     # Helpers
@@ -102,10 +90,10 @@ class SimulatedAnnealing:
 
     def solve(self):
         current = self.start_node
-        T = self.T0
         trail = [row[:] for row in self.initial_maze]   # vết đi tĩnh
+        step = 0
 
-        while T > self.Tmin:
+        while True:
             if self.is_goal(current):
                 break
 
@@ -113,38 +101,33 @@ class SimulatedAnnealing:
             if not moves:
                 break
 
-            m = random.choice(moves)
-            nxt = self._do_move(current, m)
+            best_nxt = None
+            best_cost = float('inf')
 
-            deltaE = nxt.cost_path - current.cost_path
+            for m in moves:
+                nxt = self._do_move(current, m)
+                if nxt.cost_path < best_cost:
+                    best_cost = nxt.cost_path
+                    best_nxt = nxt
 
-            if deltaE < 0:
-                accepted = True
-                prob = 1.0
-            else:
-                prob = math.exp(-deltaE / T)
-                accepted = random.random() < prob
+            # Cho phép plateau hay chỉ cho strict?
+            # Thường steepest ascent dừng ở local max: best_cost >= current.cost_path
+            if best_nxt is None or best_nxt.cost_path >= current.cost_path:
+                break
 
-            if accepted:
-                px, py = self.get_location(current.state)
-                if trail[px][py] != 3:
-                    trail[px][py] = 7
-                current = nxt
+            px, py = self.get_location(current.state)
+            if trail[px][py] != 3:
+                trail[px][py] = 7
 
-            # Snapshot: (matrix, T, deltaE, prob, accepted)
+            current = best_nxt
+            step += 1
+
+            # Snapshot: (matrix, step_count, current_cost)
             snapshot = [row[:] for row in trail]
             cx, cy = self.get_location(current.state)
             if cx is not None:
                 snapshot[cx][cy] = 3
 
-            self.search_history.append((
-                snapshot,
-                round(T, 4),
-                round(deltaE, 4),
-                round(prob, 4),
-                accepted,
-            ))
-
-            T *= self.alpha
+            self.search_history.append((snapshot, step, current.cost_path))
 
         return current
