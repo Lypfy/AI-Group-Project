@@ -10,6 +10,7 @@ from algorithms.uninformed.dfs import DFS
 from algorithms.informed.gbfs import GBFS
 from algorithms.local.simulated_annealing import SimulatedAnnealing
 from algorithms.local.steepest_ascent_hill_climbing import SteepestAscentHillClimbing
+from algorithms.complex_environment.belief_state_dfs import BeliefStateDFS
 
 # Nhúng các component UI
 from ui.components.control_panel import ControlPanel
@@ -46,6 +47,7 @@ class MazeApp:
             "Greedy Best-First Search (GBFS)": GBFS,
             "Simulated Annealing (SA)": SimulatedAnnealing,
             "Steepest Ascent Hill Climbing (SAHC)": SteepestAscentHillClimbing,
+            "Sensorless Search (Belief State)": BeliefStateDFS,
         }
         
         # =========================
@@ -166,6 +168,26 @@ class MazeApp:
         if self._is_sa():
             self.log(f"  T₀={self.control_panel.sa_T0.get()}, α={self.control_panel.sa_alpha.get()}, T_min={self.control_panel.sa_Tmin.get()}", "info")
 
+    def _animate_smooth_transition(self, old_matrix, new_matrix, action, merge_cells, speed, on_complete):
+        frames = 8
+        interval = max(10, speed // frames)
+        
+        def frame_step(f):
+            if not self.is_running: return
+            if self.is_paused:
+                self.root.after(100, lambda: frame_step(f))
+                return
+            
+            progress = f / frames
+            self.maze_view.draw_grid_smooth(old_matrix, new_matrix, self.goal_pos, action, merge_cells, progress)
+            
+            if f < frames:
+                self.root.after(interval, lambda: frame_step(f + 1))
+            else:
+                on_complete()
+                
+        frame_step(1)
+
     def animate_search(self):
         if not self.is_running:
             return
@@ -184,16 +206,29 @@ class MazeApp:
                     text=f"ΔE: {deltaE:+.2f}",
                     fg="#a6e3a1" if deltaE < 0 else "#f38ba8")
                 self.maze_view.path_label.config(text=f"P: {prob:.3f} {sign}")
+                self.maze_view.draw_grid(matrix, self.goal_pos)
+                self.search_idx += 1
+                self.root.after(self.control_panel.speed_var.get(), self.animate_search)
             elif isinstance(frame_data, tuple):
-                matrix, visited_count, frontier_count = frame_data
-                self.maze_view.visited_label.config(text=f"Visited: {visited_count}")
-                self.maze_view.frontier_label.config(text=f"Cost/Frontier: {frontier_count}")
+                if len(frame_data) == 6:
+                    matrix, visited_count, frontier_count, belief_size, action, merge_cells = frame_data
+                    self.maze_view.visited_label.config(text=f"Visited: {visited_count}")
+                    self.maze_view.draw_grid(matrix, self.goal_pos, action=action, merge_cells=merge_cells)
+                            
+                    self.search_idx += 1
+                    self.root.after(self.control_panel.speed_var.get(), self.animate_search)
+                elif len(frame_data) == 3:
+                    matrix, visited_count, frontier_count = frame_data
+                    self.maze_view.visited_label.config(text=f"Visited: {visited_count}")
+                    self.maze_view.frontier_label.config(text=f"Cost/Frontier: {frontier_count}")
+                    self.maze_view.draw_grid(matrix, self.goal_pos)
+                    self.search_idx += 1
+                    self.root.after(self.control_panel.speed_var.get(), self.animate_search)
             else:
                 matrix = frame_data
-
-            self.maze_view.draw_grid(matrix, self.goal_pos)
-            self.search_idx += 1
-            self.root.after(self.control_panel.speed_var.get(), self.animate_search)
+                self.maze_view.draw_grid(matrix, self.goal_pos)
+                self.search_idx += 1
+                self.root.after(self.control_panel.speed_var.get(), self.animate_search)
         else:
             self.step_idx = 0
             self.animate_step()
@@ -266,16 +301,45 @@ class MazeApp:
             return
             
         if self.step_idx < len(self.path):
-            matrix, action = self.path[self.step_idx]
-            self.maze_view.draw_grid(matrix, self.goal_pos)
+            path_tuple = self.path[self.step_idx]
+            is_smooth = False
+            
+            if len(path_tuple) == 3:
+                matrix, action, merge_cells = path_tuple
+                is_smooth = True
+            else:
+                matrix, action = path_tuple
+                self.maze_view.draw_grid(matrix, self.goal_pos)
+            
             self.maze_view.path_label.config(text=f"Path: {self.step_idx}/{len(self.path) - 1}")
             
-            if action != "START":
-                self.log(f"Bước {self.step_idx}: Đi {action}", "info")
+            # Use path_tuple[1] as action
+            action_name = path_tuple[1]
+            if action_name != "START":
+                if is_smooth:
+                    belief_count = sum(row.count(10) for row in matrix) + sum(row.count(3) for row in matrix)
+                    merge_count = len(merge_cells) if 'merge_cells' in locals() else 0
+                    msg = f"Bước {self.step_idx}: Đi {action_name} | Bóng ma còn: {belief_count}"
+                    if merge_count > 0:
+                        msg += f" | Dồn cục: {merge_count}"
+                    self.log(msg, "warning" if merge_count > 0 else "info")
+                else:
+                    self.log(f"Bước {self.step_idx}: Đi {action_name}", "info")
                 
             self.maze_view.progress["value"] = self.step_idx + 1
-            self.step_idx += 1
-            self.root.after(self.control_panel.speed_var.get(), self.animate_step)
+            
+            if is_smooth:
+                old_matrix = matrix
+                if self.step_idx > 0:
+                    prev_path = self.path[self.step_idx - 1]
+                    old_matrix = prev_path[0]
+                
+                self.step_idx += 1
+                speed = self.control_panel.speed_var.get()
+                self._animate_smooth_transition(old_matrix, matrix, action, merge_cells, speed, self.animate_step)
+            else:
+                self.step_idx += 1
+                self.root.after(self.control_panel.speed_var.get(), self.animate_step)
         else:
             if getattr(self, 'is_success', True):
                 self.maze_view.status_label.config(text="✔ Hoàn thành!", fg="#a6e3a1")

@@ -107,7 +107,7 @@ class ControlPanel(tk.Frame):
         speed_frame = tk.Frame(self.inner_frame, bg="#313244")
         speed_frame.pack(fill="x", padx=15)
         self.speed_slider = tk.Scale(
-            speed_frame, from_=20, to=500, orient="horizontal", variable=self.speed_var,
+            speed_frame, from_=5, to=2000, orient="horizontal", variable=self.speed_var,
             bg="#313244", fg="white", troughcolor="#181825", highlightthickness=0,
         )
         self.speed_slider.pack(fill="x")
