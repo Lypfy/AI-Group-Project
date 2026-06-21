@@ -158,6 +158,20 @@ LEVEL_7 = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
+# MAP 8: Partially Observable (Tác nhân quan sát một phần) - Mê cung với 5 vị trí bắt đầu có cùng cảm biến quan sát ban đầu
+LEVEL_8 = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 3, 0, 0, 1, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1],
+    [1, 9, 1, 1, 0, 0, 0, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+]
+
 MAPS = {
     "Màn 1: Không gian mở (BFS)": {
         "matrix": LEVEL_1,
@@ -186,5 +200,9 @@ MAPS = {
     "Màn 7: Cảm biến hỏng (Belief State)": {
         "matrix": LEVEL_7,
         "hint": "💡 Gợi ý: Robot bị mù hoàn toàn, không biết mình đang đứng ở đâu (có thể ở bất kỳ ô trống nào). Nó sẽ cố ý đâm vào các góc tường để 'gom' các khả năng vị trí lại, cho đến khi tụ lại thành 1 robot và đi tới đích!"
+    },
+    "Màn 8: Quan sát một phần (Partially Observable)": {
+        "matrix": LEVEL_8,
+        "hint": "💡 Gợi ý: Robot chỉ có cảm biến nhận biết tường xung quanh. Ban đầu robot xuất hiện tại ô số 3 thực tế nhưng có tới 5 vị trí khả nghi có cấu hình tường giống hệt. Robot sẽ di chuyển để loại bỏ sự mơ hồ (belief state co về 1) và tìm đường tối ưu tới đích!"
     }
 }
