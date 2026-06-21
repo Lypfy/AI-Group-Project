@@ -110,6 +110,12 @@ class MazeView(tk.Frame):
         cols = len(matrix[0])
         cell_size = self.canvas_width // cols
         
+        is_chessboard = False
+        if rows == cols:
+            has_walls = any(1 in row for row in matrix)
+            if not has_walls or any(val in [12, 13] for row in matrix for val in row):
+                is_chessboard = True
+        
         for i in range(rows):
             for j in range(cols):
                 x1 = j * cell_size
@@ -128,7 +134,10 @@ class MazeView(tk.Frame):
                     self.canvas.create_line(x2 - 1, y2 - 1, x2 - 1, y1 + 1, fill="#11111b", width=2)
                     self.canvas.create_line(x2 - 1, y2 - 1, x1 + 1, y2 - 1, fill="#11111b", width=2)
                 else:
-                    color = "#cdd6f4"
+                    if is_chessboard:
+                        color = "#cdd6f4" if (i + j) % 2 == 0 else "#585b70"
+                    else:
+                        color = "#cdd6f4"
                     text_char = ""
                     if value == 3:
                         color = "#89b4fa"
@@ -152,8 +161,15 @@ class MazeView(tk.Frame):
                         # 2. Merging Animation: Chớp màu vàng khi các bóng ma dồn lại
                         if (i, j) in merge_cells:
                             color = "#f9e2af"
+                    elif value == 12:
+                        if not is_chessboard:
+                            color = "#cba6f7"
+                        text_char = "👑"
+                    elif value == 13:
+                        color = "#f38ba8"
+                        text_char = "💥"
                         
-                    if (i, j) == goal_pos and value != 3 and value != 10:
+                    if (i, j) == goal_pos and value not in [3, 10, 12, 13]:
                         color = "#a6e3a1"
                         text_char = "🏁"
                         
@@ -190,6 +206,12 @@ class MazeView(tk.Frame):
         cols = len(new_matrix[0])
         cell_size = self.canvas_width // cols
         
+        is_chessboard = False
+        if rows == cols:
+            has_walls = any(1 in row for row in new_matrix)
+            if not has_walls or any(val in [12, 13] for row in new_matrix for val in row):
+                is_chessboard = True
+        
         # 1. Draw static background
         for i in range(rows):
             for j in range(cols):
@@ -209,7 +231,10 @@ class MazeView(tk.Frame):
                     self.canvas.create_line(x2 - 1, y2 - 1, x2 - 1, y1 + 1, fill="#11111b", width=2)
                     self.canvas.create_line(x2 - 1, y2 - 1, x1 + 1, y2 - 1, fill="#11111b", width=2)
                 else:
-                    color = "#cdd6f4"
+                    if is_chessboard:
+                        color = "#cdd6f4" if (i + j) % 2 == 0 else "#585b70"
+                    else:
+                        color = "#cdd6f4"
                     text_char = ""
                     # Static tracks/marks
                     if value == 5:
@@ -224,14 +249,24 @@ class MazeView(tk.Frame):
                     elif value == 8:
                         color = "#f38ba8"
                         text_char = "❌"
+                    elif value == 12:
+                        if not is_chessboard:
+                            color = "#cba6f7"
+                        text_char = "👑"
+                    elif value == 13:
+                        color = "#f38ba8"
+                        text_char = "💥"
                         
-                    if (i, j) == goal_pos and value != 3 and value != 10:
+                    if (i, j) == goal_pos and value not in [3, 10, 12, 13]:
                         color = "#a6e3a1"
                         text_char = "🏁"
                         
                     # For moving entities (3 or 10), draw empty background (tint if merging)
                     if value in [3, 10]:
-                        color = "#cdd6f4"
+                        if is_chessboard:
+                            color = "#cdd6f4" if (i + j) % 2 == 0 else "#585b70"
+                        else:
+                            color = "#cdd6f4"
                         # Only flash merge when progress is almost complete
                         if value == 10 and (i, j) in merge_cells and progress > 0.5:
                             color = "#f9e2af"

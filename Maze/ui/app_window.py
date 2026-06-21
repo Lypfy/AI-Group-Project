@@ -12,6 +12,7 @@ from algorithms.local.simulated_annealing import SimulatedAnnealing
 from algorithms.local.steepest_ascent_hill_climbing import SteepestAscentHillClimbing
 from algorithms.complex_environment.belief_state_dfs import BeliefStateDFS
 from algorithms.complex_environment.partially_observable_bfs import PartiallyObservableBFS
+from algorithms.constraint_reasoning.forward_checking import ForwardChecking
 
 # Nhúng các component UI
 from ui.components.control_panel import ControlPanel
@@ -50,6 +51,7 @@ class MazeApp:
             "Steepest Ascent Hill Climbing (SAHC)": SteepestAscentHillClimbing,
             "Sensorless Search (Belief State)": BeliefStateDFS,
             "Partially Observable Search (BFS)": PartiallyObservableBFS,
+            "CSP (Forward Checking)": ForwardChecking,
         }
         
         # =========================
@@ -139,14 +141,14 @@ class MazeApp:
         self.control_panel.hint_label.config(text=level_data["hint"])
         
         # Tìm goal
-        goal_x, goal_y = 19, 19
+        goal_x, goal_y = None, None
         for i in range(len(current_map)):
             for j in range(len(current_map[0])):
                 if current_map[i][j] == 9:
                     goal_x, goal_y = i, j
                     current_map[i][j] = 0
                     break
-        self.goal_pos = (goal_x, goal_y)
+        self.goal_pos = (goal_x, goal_y) if goal_x is not None else None
         
         # Khởi tạo thuật toán
         algo_name = self.selected_algo.get()
@@ -165,7 +167,8 @@ class MazeApp:
         self.maze_view.draw_grid(current_map, self.goal_pos)
         
         self.log(f"Đã tải {level_name}", "success")
-        self.log(f"Điểm đích: {self.goal_pos}", "info")
+        if self.goal_pos:
+            self.log(f"Điểm đích: {self.goal_pos}", "info")
         self.log(f"Thuật toán: {algo_name}", "warning")
         if self._is_sa():
             self.log(f"  T₀={self.control_panel.sa_T0.get()}, α={self.control_panel.sa_alpha.get()}, T_min={self.control_panel.sa_Tmin.get()}", "info")
@@ -223,8 +226,13 @@ class MazeApp:
                     self.root.after(self.control_panel.speed_var.get(), self.animate_search)
                 elif len(frame_data) == 3:
                     matrix, visited_count, frontier_count = frame_data
-                    self.maze_view.visited_label.config(text=f"Visited: {visited_count}")
-                    self.maze_view.frontier_label.config(text=f"Cost/Frontier: {frontier_count}")
+                    if self.selected_algo.get() == "CSP (Forward Checking)":
+                        self.maze_view.visited_label.config(text=f"Assignments: {visited_count}")
+                        self.maze_view.frontier_label.config(text=f"Backtracks: {frontier_count}")
+                        self.maze_view.path_label.config(text="State: Solving")
+                    else:
+                        self.maze_view.visited_label.config(text=f"Visited: {visited_count}")
+                        self.maze_view.frontier_label.config(text=f"Cost/Frontier: {frontier_count}")
                     self.maze_view.draw_grid(matrix, self.goal_pos)
                     self.search_idx += 1
                     self.root.after(self.control_panel.speed_var.get(), self.animate_search)
@@ -315,7 +323,12 @@ class MazeApp:
                 matrix, action = path_tuple
                 self.maze_view.draw_grid(matrix, self.goal_pos)
             
-            self.maze_view.path_label.config(text=f"Path: {self.step_idx}/{len(self.path) - 1}")
+            if self.selected_algo.get() == "CSP (Forward Checking)":
+                self.maze_view.visited_label.config(text=f"Assignments: {self.maze_logic.assignments_count}")
+                self.maze_view.frontier_label.config(text=f"Backtracks: {self.maze_logic.backtracks_count}")
+                self.maze_view.path_label.config(text="State: Solved")
+            else:
+                self.maze_view.path_label.config(text=f"Path: {self.step_idx}/{len(self.path) - 1}")
             
             # Use path_tuple[1] as action
             action_name = path_tuple[1]
@@ -328,7 +341,10 @@ class MazeApp:
                         msg += f" | Dồn cục: {merge_count}"
                     self.log(msg, "warning" if merge_count > 0 else "info")
                 else:
-                    self.log(f"Bước {self.step_idx}: Đi {action_name}", "info")
+                    if self.selected_algo.get() == "CSP (Forward Checking)":
+                        self.log("Đã tìm thấy lời giải N-Queens!", "success")
+                    else:
+                        self.log(f"Bước {self.step_idx}: Đi {action_name}", "info")
                 
             self.maze_view.progress["value"] = self.step_idx + 1
             
@@ -347,7 +363,10 @@ class MazeApp:
         else:
             if getattr(self, 'is_success', True):
                 self.maze_view.status_label.config(text="✔ Hoàn thành!", fg="#a6e3a1")
-                self.log("DONE! Đã tới đích.", "success")
+                if self.selected_algo.get() == "CSP (Forward Checking)":
+                    self.log("DONE! Đã xếp thành công 8 quân Hậu thỏa mãn tất cả ràng buộc.", "success")
+                else:
+                    self.log("DONE! Đã tới đích.", "success")
             else:
                 self.maze_view.status_label.config(text="❌ Dừng lại: Bị kẹt!", fg="#f38ba8")
                 self.log("Bị kẹt ở Cực đại cục bộ hoặc hết nhiệt độ!", "error")

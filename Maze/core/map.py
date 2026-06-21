@@ -172,6 +172,18 @@ LEVEL_8 = [
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 ]
 
+# MAP 9: Chessboard for N-Queens Puzzle (CSP)
+LEVEL_9 = [
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0]
+]
+
 MAPS = {
     "Màn 1: Không gian mở (BFS)": {
         "matrix": LEVEL_1,
@@ -204,5 +216,9 @@ MAPS = {
     "Màn 8: Quan sát một phần (Partially Observable)": {
         "matrix": LEVEL_8,
         "hint": "💡 Gợi ý: Robot chỉ có cảm biến nhận biết tường xung quanh. Ban đầu robot xuất hiện tại ô số 3 thực tế nhưng có tới 5 vị trí khả nghi có cấu hình tường giống hệt. Robot sẽ di chuyển để loại bỏ sự mơ hồ (belief state co về 1) và tìm đường tối ưu tới đích!"
+    },
+    "Màn 9: Giải đố Hậu (CSP)": {
+        "matrix": LEVEL_9,
+        "hint": "💡 Gợi ý: Bàn cờ vua 8x8 trống. Thuật toán CSP (Backtracking + Forward Checking + MRV Heuristic) sẽ tìm cách xếp 8 quân Hậu sao cho không có quân nào tấn công quân nào. Các quân Hậu sẽ được đặt/rút trong thời gian thực!"
     }
 }
