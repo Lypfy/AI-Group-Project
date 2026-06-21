@@ -51,7 +51,7 @@ class ControlPanel(tk.Frame):
             self.inner_frame, text="1. Chọn màn chơi:", bg="#313244", fg="#a6e3a1", font=("Segoe UI", 11, "bold"),
         ).pack(pady=(5, 0), anchor="w", padx=15)
         self.level_combo = ttk.Combobox(
-            self.inner_frame, textvariable=self.selected_level, values=list(self.levels.keys()), state="readonly", width=22,
+            self.inner_frame, textvariable=self.selected_level, values=list(self.levels.keys()), state="readonly", width=30,
         )
         self.level_combo.pack(pady=5, padx=15, fill="x")
         self.level_combo.bind("<<ComboboxSelected>>", lambda e: self.callbacks.get("on_reset", lambda: None)())
@@ -61,7 +61,7 @@ class ControlPanel(tk.Frame):
             self.inner_frame, text="2. Chọn thuật toán:", bg="#313244", fg="#89b4fa", font=("Segoe UI", 11, "bold"),
         ).pack(pady=(15, 0), anchor="w", padx=15)
         self.algo_combo = ttk.Combobox(
-            self.inner_frame, textvariable=self.selected_algo, values=list(self.algorithms.keys()), state="readonly", width=22,
+            self.inner_frame, textvariable=self.selected_algo, values=list(self.algorithms.keys()), state="readonly", width=30,
         )
         self.algo_combo.pack(pady=5, padx=15, fill="x")
         self.algo_combo.bind("<<ComboboxSelected>>", lambda e: self._on_algo_change())

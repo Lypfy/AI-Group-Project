@@ -11,6 +11,7 @@ from algorithms.informed.gbfs import GBFS
 from algorithms.local.simulated_annealing import SimulatedAnnealing
 from algorithms.local.steepest_ascent_hill_climbing import SteepestAscentHillClimbing
 from algorithms.complex_environment.belief_state_dfs import BeliefStateDFS
+from algorithms.complex_environment.partially_observable_bfs import PartiallyObservableBFS
 
 # Nhúng các component UI
 from ui.components.control_panel import ControlPanel
@@ -48,6 +49,7 @@ class MazeApp:
             "Simulated Annealing (SA)": SimulatedAnnealing,
             "Steepest Ascent Hill Climbing (SAHC)": SteepestAscentHillClimbing,
             "Sensorless Search (Belief State)": BeliefStateDFS,
+            "Partially Observable Search (BFS)": PartiallyObservableBFS,
         }
         
         # =========================
@@ -150,7 +152,7 @@ class MazeApp:
         algo_name = self.selected_algo.get()
         AlgoClass = self.algorithms[algo_name]
         if self._is_sa():
-            self.maze_logic = AlgoClass(
+            self.maze_logic = SimulatedAnnealing(
                 initial_maze=current_map,
                 goal=self.goal_pos,
                 T0=self.control_panel.sa_T0.get(),
@@ -213,6 +215,8 @@ class MazeApp:
                 if len(frame_data) == 6:
                     matrix, visited_count, frontier_count, belief_size, action, merge_cells = frame_data
                     self.maze_view.visited_label.config(text=f"Visited: {visited_count}")
+                    self.maze_view.frontier_label.config(text=f"Frontier: {frontier_count}")
+                    self.maze_view.path_label.config(text=f"Belief: {belief_size}")
                     self.maze_view.draw_grid(matrix, self.goal_pos, action=action, merge_cells=merge_cells)
                             
                     self.search_idx += 1
@@ -246,7 +250,7 @@ class MazeApp:
         current_map = copy.deepcopy(self.levels[level_name]["matrix"])
         AlgoClass = self.algorithms[algo_name]
         if self._is_sa():
-            self.maze_logic = AlgoClass(
+            self.maze_logic = SimulatedAnnealing(
                 initial_maze=current_map,
                 goal=self.goal_pos,
                 T0=self.control_panel.sa_T0.get(),
