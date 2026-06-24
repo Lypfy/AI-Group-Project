@@ -167,7 +167,7 @@ class MazeView(tk.Frame):
                         text_char = "👑"
                     elif value == 13:
                         color = "#f38ba8"
-                        text_char = "💥"
+                        text_char = "👑"
                         
                     if (i, j) == goal_pos and value not in [3, 10, 12, 13]:
                         color = "#a6e3a1"
@@ -255,7 +255,7 @@ class MazeView(tk.Frame):
                         text_char = "👑"
                     elif value == 13:
                         color = "#f38ba8"
-                        text_char = "💥"
+                        text_char = "👑"
                         
                     if (i, j) == goal_pos and value not in [3, 10, 12, 13]:
                         color = "#a6e3a1"

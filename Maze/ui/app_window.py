@@ -13,6 +13,8 @@ from algorithms.local.steepest_ascent_hill_climbing import SteepestAscentHillCli
 from algorithms.complex_environment.belief_state_dfs import BeliefStateDFS
 from algorithms.complex_environment.partially_observable_bfs import PartiallyObservableBFS
 from algorithms.constraint_reasoning.forward_checking import ForwardChecking
+from algorithms.constraint_reasoning.min_conflicts import MinConflicts
+
 
 # Nhúng các component UI
 from ui.components.control_panel import ControlPanel
@@ -52,7 +54,9 @@ class MazeApp:
             "Sensorless Search (Belief State)": BeliefStateDFS,
             "Partially Observable Search (BFS)": PartiallyObservableBFS,
             "CSP (Forward Checking)": ForwardChecking,
+            "CSP (Min-Conflicts)": MinConflicts,
         }
+
         
         # =========================
         # INIT UI
@@ -224,6 +228,16 @@ class MazeApp:
                             
                     self.search_idx += 1
                     self.root.after(self.control_panel.speed_var.get(), self.animate_search)
+                elif len(frame_data) == 4 and self.selected_algo.get() == "CSP (Min-Conflicts)":
+                    matrix, steps, conflicts, msg = frame_data
+                    self.maze_view.visited_label.config(text=f"Steps: {steps}")
+                    self.maze_view.frontier_label.config(text=f"Conflicts: {conflicts}")
+                    self.maze_view.path_label.config(text="State: Solving")
+                    if msg:
+                        self.log(msg, "info")
+                    self.maze_view.draw_grid(matrix, self.goal_pos)
+                    self.search_idx += 1
+                    self.root.after(self.control_panel.speed_var.get(), self.animate_search)
                 elif len(frame_data) == 3:
                     matrix, visited_count, frontier_count = frame_data
                     if self.selected_algo.get() == "CSP (Forward Checking)":
@@ -323,9 +337,13 @@ class MazeApp:
                 matrix, action = path_tuple
                 self.maze_view.draw_grid(matrix, self.goal_pos)
             
-            if self.selected_algo.get() == "CSP (Forward Checking)":
-                self.maze_view.visited_label.config(text=f"Assignments: {self.maze_logic.assignments_count}")
-                self.maze_view.frontier_label.config(text=f"Backtracks: {self.maze_logic.backtracks_count}")
+            if self.selected_algo.get() in ["CSP (Forward Checking)", "CSP (Min-Conflicts)"]:
+                if self.selected_algo.get() == "CSP (Forward Checking)":
+                    self.maze_view.visited_label.config(text=f"Assignments: {self.maze_logic.assignments_count}")
+                    self.maze_view.frontier_label.config(text=f"Backtracks: {self.maze_logic.backtracks_count}")
+                else:
+                    self.maze_view.visited_label.config(text=f"Steps: {self.maze_logic.steps_count}")
+                    self.maze_view.frontier_label.config(text=f"Conflicts: 0")
                 self.maze_view.path_label.config(text="State: Solved")
             else:
                 self.maze_view.path_label.config(text=f"Path: {self.step_idx}/{len(self.path) - 1}")
@@ -341,7 +359,7 @@ class MazeApp:
                         msg += f" | Dồn cục: {merge_count}"
                     self.log(msg, "warning" if merge_count > 0 else "info")
                 else:
-                    if self.selected_algo.get() == "CSP (Forward Checking)":
+                    if self.selected_algo.get() in ["CSP (Forward Checking)", "CSP (Min-Conflicts)"]:
                         self.log("Đã tìm thấy lời giải N-Queens!", "success")
                     else:
                         self.log(f"Bước {self.step_idx}: Đi {action_name}", "info")
@@ -363,7 +381,7 @@ class MazeApp:
         else:
             if getattr(self, 'is_success', True):
                 self.maze_view.status_label.config(text="✔ Hoàn thành!", fg="#a6e3a1")
-                if self.selected_algo.get() == "CSP (Forward Checking)":
+                if self.selected_algo.get() in ["CSP (Forward Checking)", "CSP (Min-Conflicts)"]:
                     self.log("DONE! Đã xếp thành công 8 quân Hậu thỏa mãn tất cả ràng buộc.", "success")
                 else:
                     self.log("DONE! Đã tới đích.", "success")

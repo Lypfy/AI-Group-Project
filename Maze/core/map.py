@@ -184,6 +184,18 @@ LEVEL_9 = [
     [0, 0, 0, 0, 0, 0, 0, 0]
 ]
 
+# MAP 10: Chessboard for N-Queens Puzzle (Min-Conflicts)
+LEVEL_10 = [
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0]
+]
+
 MAPS = {
     "Màn 1: Không gian mở (BFS)": {
         "matrix": LEVEL_1,
@@ -220,5 +232,9 @@ MAPS = {
     "Màn 9: Giải đố Hậu (CSP)": {
         "matrix": LEVEL_9,
         "hint": "💡 Gợi ý: Bàn cờ vua 8x8 trống. Thuật toán CSP (Backtracking + Forward Checking + MRV Heuristic) sẽ tìm cách xếp 8 quân Hậu sao cho không có quân nào tấn công quân nào. Các quân Hậu sẽ được đặt/rút trong thời gian thực!"
+    },
+    "Màn 10: N-Queens (Min-Conflicts)": {
+        "matrix": LEVEL_10,
+        "hint": "💡 Gợi ý: Bàn cờ vua 8x8. Thuật toán Min-Conflicts sẽ khởi tạo ngẫu nhiên 8 quân Hậu (có thể xung đột) rồi liên tục di chuyển chúng trong cùng một cột để giảm thiểu số lượng xung đột cho đến khi giải quyết!"
     }
 }
