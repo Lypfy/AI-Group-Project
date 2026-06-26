@@ -151,6 +151,9 @@ class MazeView(tk.Frame):
                     elif value == 7:
                         color = "#f9e2af"
                         text_char = "🐾"
+                    elif value == 4:
+                        color = "#f38ba8"
+                        text_char = "👾"
                     elif value == 8:
                         color = "#f38ba8"
                         text_char = "❌"
@@ -169,7 +172,7 @@ class MazeView(tk.Frame):
                         color = "#f38ba8"
                         text_char = "👑"
                         
-                    if (i, j) == goal_pos and value not in [3, 10, 12, 13]:
+                    if (i, j) == goal_pos and value not in [3, 4, 10, 12, 13]:
                         color = "#a6e3a1"
                         text_char = "🏁"
                         
@@ -257,12 +260,12 @@ class MazeView(tk.Frame):
                         color = "#f38ba8"
                         text_char = "👑"
                         
-                    if (i, j) == goal_pos and value not in [3, 10, 12, 13]:
+                    if (i, j) == goal_pos and value not in [3, 4, 10, 12, 13]:
                         color = "#a6e3a1"
                         text_char = "🏁"
                         
-                    # For moving entities (3 or 10), draw empty background (tint if merging)
-                    if value in [3, 10]:
+                    # For moving entities (3, 4, or 10), draw empty background (tint if merging)
+                    if value in [3, 4, 10]:
                         if is_chessboard:
                             color = "#cdd6f4" if (i + j) % 2 == 0 else "#585b70"
                         else:
@@ -281,25 +284,54 @@ class MazeView(tk.Frame):
                         )
 
         # 2. Draw dynamic moving entities from old_matrix to new_matrix
+        agent = "ROBOT"
+        direction = None
         if action:
             act_upper = action.upper()
+            if ":" in act_upper:
+                parts = act_upper.split(":")
+                agent = parts[0].strip()
+                direction = parts[1].strip()
+            else:
+                direction = act_upper
         else:
             act_upper = None
+
+        # Find which enemy actually changed position between old_matrix and new_matrix
+        moving_enemy_pos = None
+        if agent.startswith("ENEMY"):
+            for r in range(rows):
+                for c in range(cols):
+                    if old_matrix[r][c] == 4 and new_matrix[r][c] != 4:
+                        moving_enemy_pos = (r, c)
+                        break
+                if moving_enemy_pos:
+                    break
             
         for i in range(rows):
             for j in range(cols):
                 old_val = old_matrix[i][j]
-                if old_val in [3, 10]:
-                    # Calculate new logical position
+                if old_val in [3, 4, 10]:
+                    # Determine if this entity is the one moving
+                    is_moving = False
+                    if old_val == 3 and agent == "ROBOT":
+                        is_moving = True
+                    elif old_val == 4:
+                        if agent.startswith("ENEMY") and (i, j) == moving_enemy_pos:
+                            is_moving = True
+                    elif old_val == 10:
+                        is_moving = True
+                        
                     ni, nj = i, j
-                    if act_upper == "UP" and i > 0 and old_matrix[i - 1][j] != 1:
-                        ni = i - 1
-                    elif act_upper == "DOWN" and i < rows - 1 and old_matrix[i + 1][j] != 1:
-                        ni = i + 1
-                    elif act_upper == "LEFT" and j > 0 and old_matrix[i][j - 1] != 1:
-                        nj = j - 1
-                    elif act_upper == "RIGHT" and j < cols - 1 and old_matrix[i][j + 1] != 1:
-                        nj = j + 1
+                    if is_moving and direction:
+                        if direction == "UP" and i > 0 and old_matrix[i - 1][j] != 1:
+                            ni = i - 1
+                        elif direction == "DOWN" and i < rows - 1 and old_matrix[i + 1][j] != 1:
+                            ni = i + 1
+                        elif direction == "LEFT" and j > 0 and old_matrix[i][j - 1] != 1:
+                            nj = j - 1
+                        elif direction == "RIGHT" and j < cols - 1 and old_matrix[i][j + 1] != 1:
+                            nj = j + 1
                         
                     # Interpolated floating coordinates
                     curr_i = i + (ni - i) * progress
@@ -310,10 +342,15 @@ class MazeView(tk.Frame):
                     x2 = x1 + cell_size
                     y2 = y1 + cell_size
                     
-                    is_robot = (new_matrix[ni][nj] == 3)
-                    
-                    color = "#89b4fa" if is_robot else "#b4befe"
-                    text_char = "🤖" if is_robot else "👻"
+                    if old_val == 3:
+                        color = "#89b4fa"
+                        text_char = "🤖"
+                    elif old_val == 4:
+                        color = "#f38ba8"
+                        text_char = "👾"
+                    else: # 10
+                        color = "#b4befe"
+                        text_char = "👻"
                     
                     # Draw entity with slight padding
                     pad = 2
@@ -324,12 +361,12 @@ class MazeView(tk.Frame):
                         x1 + cell_size // 2, y1 + cell_size // 2, text=text_char, font=("Arial", int(cell_size * 0.5)),
                     )
                     
-                    if act_upper and not is_robot:
+                    if direction and is_moving and old_val == 10:
                         arrow_text = ""
-                        if act_upper == "UP": arrow_text = "↑"
-                        elif act_upper == "DOWN": arrow_text = "↓"
-                        elif act_upper == "LEFT": arrow_text = "←"
-                        elif act_upper == "RIGHT": arrow_text = "→"
+                        if direction == "UP": arrow_text = "↑"
+                        elif direction == "DOWN": arrow_text = "↓"
+                        elif direction == "LEFT": arrow_text = "←"
+                        elif direction == "RIGHT": arrow_text = "→"
                         if arrow_text:
                             self.canvas.create_text(
                                 x1 + cell_size // 2, y1 + cell_size // 2 + int(cell_size * 0.25), 

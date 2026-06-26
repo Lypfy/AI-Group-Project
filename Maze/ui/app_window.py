@@ -14,6 +14,7 @@ from algorithms.complex_environment.belief_state_dfs import BeliefStateDFS
 from algorithms.complex_environment.partially_observable_bfs import PartiallyObservableBFS
 from algorithms.constraint_reasoning.forward_checking import ForwardChecking
 from algorithms.constraint_reasoning.min_conflicts import MinConflicts
+from algorithms.game_search.alpha_beta import AlphaBeta
 
 
 # Nhúng các component UI
@@ -55,6 +56,7 @@ class MazeApp:
             "Partially Observable Search (BFS)": PartiallyObservableBFS,
             "CSP (Forward Checking)": ForwardChecking,
             "CSP (Min-Conflicts)": MinConflicts,
+            "Alpha-Beta Pruning (Game Search)": AlphaBeta,
         }
 
         
@@ -244,6 +246,10 @@ class MazeApp:
                         self.maze_view.visited_label.config(text=f"Assignments: {visited_count}")
                         self.maze_view.frontier_label.config(text=f"Backtracks: {frontier_count}")
                         self.maze_view.path_label.config(text="State: Solving")
+                    elif self.selected_algo.get() == "Alpha-Beta Pruning (Game Search)":
+                        self.maze_view.visited_label.config(text=f"Evaluated: {visited_count}")
+                        self.maze_view.frontier_label.config(text=f"Prunings: {frontier_count}")
+                        self.maze_view.path_label.config(text="State: Thinking")
                     else:
                         self.maze_view.visited_label.config(text=f"Visited: {visited_count}")
                         self.maze_view.frontier_label.config(text=f"Cost/Frontier: {frontier_count}")
@@ -301,7 +307,18 @@ class MazeApp:
         pretty_actions = []
         for act in actions:
             act_upper = act.upper()
-            if act_upper == "UP": pretty_actions.append("⬆ UP")
+            if ":" in act_upper:
+                parts = act_upper.split(":")
+                agent = parts[0].strip()
+                move = parts[1].strip()
+                agent_sym = "🤖" if agent == "ROBOT" else "👾"
+                move_sym = ""
+                if move == "UP": move_sym = "⬆"
+                elif move == "DOWN": move_sym = "⬇"
+                elif move == "LEFT": move_sym = "⬅"
+                elif move == "RIGHT": move_sym = "➡"
+                pretty_actions.append(f"{agent_sym}{move_sym}")
+            elif act_upper == "UP": pretty_actions.append("⬆ UP")
             elif act_upper == "DOWN": pretty_actions.append("⬇ DOWN")
             elif act_upper == "LEFT": pretty_actions.append("⬅ LEFT")
             elif act_upper == "RIGHT": pretty_actions.append("➡ RIGHT")
@@ -361,6 +378,20 @@ class MazeApp:
                 else:
                     if self.selected_algo.get() in ["CSP (Forward Checking)", "CSP (Min-Conflicts)"]:
                         self.log("Đã tìm thấy lời giải N-Queens!", "success")
+                    elif self.selected_algo.get() == "Alpha-Beta Pruning (Game Search)":
+                        pretty_act = action_name
+                        if ":" in action_name:
+                            agent, move = action_name.split(":")
+                            agent = agent.strip()
+                            move = move.strip().upper()
+                            agent_vn = "Robot 🤖" if agent == "Robot" else "Quái vật 👾"
+                            move_vn = move
+                            if move == "UP": move_vn = "LÊN ⬆"
+                            elif move == "DOWN": move_vn = "XUỐNG ⬇"
+                            elif move == "LEFT": move_vn = "SANG TRÁI ⬅"
+                            elif move == "RIGHT": move_vn = "SANG PHẢI ➡"
+                            pretty_act = f"{agent_vn} di chuyển {move_vn}"
+                        self.log(f"Bước {self.step_idx}: {pretty_act}", "info" if "Robot" in action_name else "warning")
                     else:
                         self.log(f"Bước {self.step_idx}: Đi {action_name}", "info")
                 
@@ -383,11 +414,17 @@ class MazeApp:
                 self.maze_view.status_label.config(text="✔ Hoàn thành!", fg="#a6e3a1")
                 if self.selected_algo.get() in ["CSP (Forward Checking)", "CSP (Min-Conflicts)"]:
                     self.log("DONE! Đã xếp thành công 8 quân Hậu thỏa mãn tất cả ràng buộc.", "success")
+                elif self.selected_algo.get() == "Alpha-Beta Pruning (Game Search)":
+                    self.log("CHIẾN THẮNG! Robot đã tới đích an toàn và tránh được quái vật.", "success")
                 else:
                     self.log("DONE! Đã tới đích.", "success")
             else:
-                self.maze_view.status_label.config(text="❌ Dừng lại: Bị kẹt!", fg="#f38ba8")
-                self.log("Bị kẹt ở Cực đại cục bộ hoặc hết nhiệt độ!", "error")
+                if self.selected_algo.get() == "Alpha-Beta Pruning (Game Search)":
+                    self.maze_view.status_label.config(text="❌ Thua cuộc: Bị bắt!", fg="#f38ba8")
+                    self.log("THUA CUỘC! Robot đã bị quái vật bắt giữ.", "error")
+                else:
+                    self.maze_view.status_label.config(text="❌ Dừng lại: Bị kẹt!", fg="#f38ba8")
+                    self.log("Bị kẹt ở Cực đại cục bộ hoặc hết nhiệt độ!", "error")
             self.is_running = False
 
     def toggle_pause(self):
