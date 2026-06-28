@@ -15,7 +15,10 @@ class GameApp:
         pygame.display.set_caption("2D Pixel Dungeon Demo")
         self.window_surface = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE | pygame.SCALED)
         
-        self.manager = pygame_gui.UIManager(WINDOW_SIZE, 'ui/theme.json')
+        from core.settings import BASE_DIR
+        import os
+        theme_path = os.path.join(BASE_DIR, 'ui', 'theme.json')
+        self.manager = pygame_gui.UIManager(WINDOW_SIZE, theme_path)
         self.pixel_font = pygame.font.SysFont('couriernew', 16, bold=True)
         
         # Load assets
