@@ -94,10 +94,15 @@ class GBFS:
         return abs(x - self.goal[0]) + abs(y - self.goal[1])
 
     def solve(self):
+        import time
         tracker = [row[:] for row in self.initial_maze]
+        pure_compute_time = 0.0
         
         while len(self.frontier):
+            t_start = time.perf_counter()
             node = heapq.heappop(self.frontier)
+            t_end = time.perf_counter()
+            pure_compute_time += (t_end - t_start)
             
             cx, cy = self.get_location(node.state)
             if tracker[cx][cy] != 3:
@@ -106,24 +111,39 @@ class GBFS:
             log_msg = f"Đang xét node ({cx}, {cy}) (g={node.g}, h={node.cost_path}). "
             added_nodes = []
 
-            if self.is_goal(node):
+            t_start = time.perf_counter()
+            is_goal = self.is_goal(node)
+            t_end = time.perf_counter()
+            pure_compute_time += (t_end - t_start)
+
+            if is_goal:
                 log_msg += "Là node đích!"
                 self.search_history.append(([row[:] for row in tracker], len(self.reached), len(self.frontier), log_msg))
+                self.compute_time_ms = pure_compute_time * 1000
                 return node
 
+            t_start = time.perf_counter()
             move = self.possible_move(node)
+            new_nodes_to_add = []
             for m in move:
                 new_node = self.act(node, m)
                 state_tuple = self.matrix_to_tuple(new_node.state)
                 
                 if state_tuple not in self.reached:
-                    heapq.heappush(self.frontier, new_node)
-                    self.reached.add(state_tuple)
+                    new_nodes_to_add.append((new_node, state_tuple))
                     
-                    nx, ny = self.get_location(new_node.state)
-                    added_nodes.append(f"({nx}, {ny})")
-                    if tracker[nx][ny] != 3:
-                        tracker[nx][ny] = 5
+            for new_node, state_tuple in new_nodes_to_add:
+                heapq.heappush(self.frontier, new_node)
+                self.reached.add(state_tuple)
+            t_end = time.perf_counter()
+            pure_compute_time += (t_end - t_start)
+            
+            # Khối này chỉ dùng cho UI tracking
+            for new_node, _ in new_nodes_to_add:
+                nx, ny = self.get_location(new_node.state)
+                added_nodes.append(f"({nx}, {ny})")
+                if tracker[nx][ny] != 3:
+                    tracker[nx][ny] = 5
                         
             if added_nodes:
                 log_msg += f"Thêm vào frontier: {', '.join(added_nodes)}. "
@@ -138,4 +158,5 @@ class GBFS:
 
             self.search_history.append(([row[:] for row in tracker], len(self.reached), len(self.frontier), log_msg))
 
+        self.compute_time_ms = pure_compute_time * 1000
         return None

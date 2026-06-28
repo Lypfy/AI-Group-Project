@@ -56,10 +56,15 @@ def run_algorithm(algo_name, maze, start_node, goal_node, current_level_idx):
         algo = None
 
     if algo:
-        start_time = time.time()
+        start_time = time.perf_counter()
         goal_result = algo.solve()
-        end_time = time.time()
-        elapsed_time_ms = (end_time - start_time) * 1000
+        end_time = time.perf_counter()
+        
+        # If the algorithm tracks its own pure compute time, use it
+        if hasattr(algo, 'compute_time_ms'):
+            elapsed_time_ms = algo.compute_time_ms
+        else:
+            elapsed_time_ms = (end_time - start_time) * 1000
         
         return _make_generator(algo, goal_result, algo_name, elapsed_time_ms)
     

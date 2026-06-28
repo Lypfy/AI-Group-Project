@@ -102,7 +102,8 @@ class AStar:
             if tracker[cx][cy] != 3:
                 tracker[cx][cy] = 6
                 
-            log_msg = f"Đang xét node ({cx}, {cy}) (g={node.g}, f={node.cost_path}). "
+            h_val = node.cost_path - node.g
+            log_msg = f"Đang xét node ({cx}, {cy}) (g={node.g}, h={h_val}, f={node.cost_path}). "
             added_nodes = []
 
             if self.is_goal(node):
