@@ -1,7 +1,8 @@
-import tkinter as tk
-from ui.app_window import MazeApp
+from core.app import GameApp
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = MazeApp(root)
-    root.mainloop()
+def main():
+    app = GameApp()
+    app.run()
+
+if __name__ == '__main__':
+    main()

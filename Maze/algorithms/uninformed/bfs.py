@@ -41,12 +41,20 @@ class BFS:
         matrix = [row[:] for row in node.state]
         x, y = self.get_location(node.state)
 
+        target_val = 1
+        if m == "up": target_val = matrix[x-1][y]
+        elif m == "down": target_val = matrix[x+1][y]
+        elif m == "left": target_val = matrix[x][y-1]
+        elif m == "right": target_val = matrix[x][y+1]
+
+        move_cost = 5 if target_val == 8 else 1
+
         if m == "up": matrix[x][y], matrix[x-1][y] = matrix[x-1][y], matrix[x][y]
         elif m == "down": matrix[x][y], matrix[x+1][y] = matrix[x+1][y], matrix[x][y]
         elif m == "left": matrix[x][y], matrix[x][y-1] = matrix[x][y-1], matrix[x][y]
         elif m == "right": matrix[x][y], matrix[x][y+1] = matrix[x][y+1], matrix[x][y]
 
-        return Node(matrix, node, m, node.cost_path + 1)
+        return Node(matrix, node, m, node.cost_path + move_cost)
     
     def is_goal(self, node):
         x, y = self.get_location(node.state)
@@ -85,10 +93,12 @@ class BFS:
             if tracker[cx][cy] != 3: # Không đè lên vị trí robot xuất phát
                 tracker[cx][cy] = 6
                 
-            # Snapshot tracker tĩnh (robot không nhảy)
-            self.search_history.append(([row[:] for row in tracker], len(self.reached), len(self.frontier)))
+            log_msg = f"Đang xét node ({cx}, {cy}) (cost={node.cost_path}). "
+            added_nodes = []
 
             if self.is_goal(node):
+                log_msg += "Là node đích!"
+                self.search_history.append(([row[:] for row in tracker], len(self.reached), len(self.frontier), log_msg))
                 return node
 
             move = self.possible_move(node)
@@ -102,6 +112,22 @@ class BFS:
                     
                     # Đánh dấu ô mới đưa vào hàng đợi là Frontier (5)
                     nx, ny = self.get_location(new_node.state)
+                    added_nodes.append(f"({nx}, {ny})")
                     if tracker[nx][ny] != 3:
                         tracker[nx][ny] = 5
+                        
+            if added_nodes:
+                log_msg += f"Thêm vào frontier: {', '.join(added_nodes)}. "
+            else:
+                log_msg += "Không có node mới thêm vào. "
+                
+            frontier_nodes = []
+            for f_node in self.frontier:
+                fx, fy = self.get_location(f_node.state)
+                frontier_nodes.append(f"({fx}, {fy})")
+            log_msg += f"Frontier hiện tại: [{', '.join(frontier_nodes)}]"
+
+            # Snapshot tracker tĩnh (robot không nhảy)
+            self.search_history.append(([row[:] for row in tracker], len(self.reached), len(self.frontier), log_msg))
+
         return None

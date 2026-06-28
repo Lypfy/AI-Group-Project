@@ -10,6 +10,8 @@ class Node:
         self.cost_path = cost_path
 
 
+from levels.maze_data import RESONANCE_MAP
+
 class SimulatedAnnealing:
     """
     Simulated Annealing cho bài toán tìm đường trong mê cung.
@@ -23,11 +25,18 @@ class SimulatedAnnealing:
         - accepted        : True nếu bước được chấp nhận
     """
 
-    def __init__(self, initial_maze, goal=(19, 19), T0=100.0, Tmin=0.1, alpha=0.99):
+    def __init__(self, initial_maze, goal=(19, 19), T0=100.0, Tmin=0.1, alpha=0.99, res_map=None):
         self.goal = goal
+        self.res_map = res_map
+        self.is_resonance_level = (res_map is not None)
         self.initial_maze = [row[:] for row in initial_maze]
-        self.start_node = Node(initial_maze, None, "START", self._manhattan(initial_maze))
+        self.T0 = 1000.0
+        self.Tmin = 0.01
+        self.alpha = 0.99
+        self.start_node = Node(initial_maze, None, "START", self._cost(initial_maze))
         self.search_history = []
+        self.visited = set()
+        self.visited.add(self.matrix_to_tuple(initial_maze))
         self.T0 = T0
         self.Tmin = Tmin
         self.alpha = alpha
@@ -35,6 +44,12 @@ class SimulatedAnnealing:
     # ─────────────────────────────────────────────
     # Helpers
     # ─────────────────────────────────────────────
+
+    def _display_val(self, cost):
+        return 100 - cost if self.is_resonance_level else cost
+
+    def _display_name(self):
+        return "Resonance" if self.is_resonance_level else "Chi phí"
 
     def matrix_to_tuple(self, matrix):
         return tuple(cell for row in matrix for cell in row)
@@ -46,10 +61,15 @@ class SimulatedAnnealing:
                     return i, j
         return None, None
 
-    def _manhattan(self, matrix):
+    def _cost(self, matrix):
         x, y = self.get_location(matrix)
         if x is None:
             return float("inf")
+            
+        if self.is_resonance_level:
+            res = self.res_map[x][y]
+            return 100 - res
+            
         return abs(x - self.goal[0]) + abs(y - self.goal[1])
 
     def possible_move(self, node):
@@ -69,7 +89,7 @@ class SimulatedAnnealing:
         elif m == "down":  matrix[x][y], matrix[x + 1][y] = matrix[x + 1][y], matrix[x][y]
         elif m == "left":  matrix[x][y], matrix[x][y - 1] = matrix[x][y - 1], matrix[x][y]
         elif m == "right": matrix[x][y], matrix[x][y + 1] = matrix[x][y + 1], matrix[x][y]
-        return Node(matrix, node, m, self._manhattan(matrix))
+        return Node(matrix, node, m, self._cost(matrix))
 
     def is_goal(self, node):
         x, y = self.get_location(node.state)
@@ -92,7 +112,7 @@ class SimulatedAnnealing:
             for prev_n in nodes[1:i]:
                 px, py = self.get_location(prev_n.state)
                 if matrix[px][py] != 3:
-                    matrix[px][py] = 7
+                    matrix[px][py] = 6
             path.append((matrix, n.act))
         return path
 
@@ -104,6 +124,13 @@ class SimulatedAnnealing:
         current = self.start_node
         T = self.T0
         trail = [row[:] for row in self.initial_maze]   # vết đi tĩnh
+
+        # Lưu trạng thái ban đầu
+        snapshot = [row[:] for row in trail]
+        cx, cy = self.get_location(current.state)
+        if cx is not None:
+            snapshot[cx][cy] = 3
+        self.search_history.append((snapshot, len(self.visited), 0, f"Start: {self._display_name()}={self._display_val(current.cost_path)}, T={T:.2f}"))
 
         while T > self.Tmin:
             if self.is_goal(current):
@@ -128,7 +155,7 @@ class SimulatedAnnealing:
             if accepted:
                 px, py = self.get_location(current.state)
                 if trail[px][py] != 3:
-                    trail[px][py] = 7
+                    trail[px][py] = 6
                 current = nxt
 
             # Snapshot: (matrix, T, deltaE, prob, accepted)
@@ -137,12 +164,14 @@ class SimulatedAnnealing:
             if cx is not None:
                 snapshot[cx][cy] = 3
 
+            self.visited.add(self.matrix_to_tuple(current.state))
+            
+            log_msg = f"T={T:.4f}, {self._display_name()}={self._display_val(current.cost_path)}, P={prob:.4f}, Accept={accepted}"
             self.search_history.append((
                 snapshot,
-                round(T, 4),
-                round(deltaE, 4),
-                round(prob, 4),
-                accepted,
+                len(self.visited),
+                0,
+                log_msg
             ))
 
             T *= self.alpha

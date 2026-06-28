@@ -2,100 +2,132 @@ import random
 
 class MinConflictsNode:
     def __init__(self, assignment):
-        self.assignment = assignment  # dict of col -> row
+        self.assignment = assignment  # dict of (r, c) -> value
 
 class MinConflicts:
     """
-    Giải bài toán CSP (ví dụ N-Queens) bằng thuật toán Min-Conflicts (Tìm kiếm cục bộ).
+    Giải bài toán CSP (ví dụ Latin Square / Đặt Gem) bằng thuật toán Min-Conflicts (Tìm kiếm cục bộ).
     """
     def __init__(self, initial_maze, goal=None, max_steps=1000):
-        self.N = len(initial_maze)
         self.initial_maze = [row[:] for row in initial_maze]
+        self.rows = len(initial_maze)
+        self.cols = len(initial_maze[0])
         self.search_history = []
         self.max_steps = max_steps
         self.steps_count = 0
+        
+        self.puzzle_cells = []
+        self.initial_assignment = {}
+        for r in range(self.rows):
+            for c in range(self.cols):
+                val = self.initial_maze[r][c]
+                if val == 20:
+                    self.puzzle_cells.append((r, c))
+                elif val in [21, 22, 23, 24]:
+                    self.puzzle_cells.append((r, c))
+                    self.initial_assignment[(r, c)] = val
+                    
+                    
+        self.N = 4 # Kích thước lưới 4x4
+        self.colors = [21, 22, 23, 24]
 
     def _create_matrix(self, assignment, active_cell=None, is_failed=False):
-        # Tạo ma trận N x N để hiển thị
-        # 0: Ô trống
-        # 12: Quân Hậu hợp lệ (👑)
-        # 13: Quân Hậu xung đột/đang xét (💥)
-        matrix = [[0 for _ in range(self.N)] for _ in range(self.N)]
+        matrix = [[0 for _ in range(self.cols)] for _ in range(self.rows)]
         
-        for c, r in assignment.items():
-            matrix[r][c] = 12
-            
-        # Kiểm tra và đánh dấu các quân hậu có xung đột
-        for c, r in assignment.items():
-            if self._conflicts(c, r, assignment) > 0:
-                matrix[r][c] = 13
+        for (r, c), val in assignment.items():
+            is_conflict = self._conflicts(r, c, val, assignment) > 0
+            is_active = (r, c) == active_cell
+            matrix[r][c] = (val, is_conflict, is_active)
 
-        if active_cell:
-            r, c = active_cell
-            matrix[r][c] = 13
         return matrix
 
-    def _conflicts(self, col, row, assignment):
+    def _conflicts(self, r, c, val, assignment):
         count = 0
-        for c, r in assignment.items():
-            if c == col: continue
-            if r == row or abs(r - row) == abs(c - col):
-                count += 1
+        for (ar, ac), aval in assignment.items():
+            if ar == r and ac == c: continue
+            if aval == val:
+                if ar == r or ac == c:
+                    count += 1
         return count
 
     def _total_conflicts(self, assignment):
         total = 0
-        for c, r in assignment.items():
-            total += self._conflicts(c, r, assignment)
+        for (r, c), val in assignment.items():
+            total += self._conflicts(r, c, val, assignment)
         return total // 2
 
     def solve(self):
-        # Khởi tạo ngẫu nhiên một trạng thái đầy đủ
-        assignment = {col: random.randint(0, self.N - 1) for col in range(self.N)}
+        if not self.puzzle_cells:
+            print("Không tìm thấy lưới giải đố trong bản đồ!")
+            return None
+            
+        # Khởi tạo trạng thái ban đầu
+        assignment = {}
+        for cell in self.puzzle_cells:
+            if cell in self.initial_assignment:
+                assignment[cell] = self.initial_assignment[cell]
+            else:
+                assignment[cell] = random.choice(self.colors)
+                
         current_conflicts = self._total_conflicts(assignment)
         
         # Ghi nhận khởi tạo
         matrix = self._create_matrix(assignment)
-        self.search_history.append((matrix, 0, current_conflicts, f"Khởi tạo ngẫu nhiên (Lỗi: {current_conflicts})"))
+        self.search_history.append((matrix, 0, current_conflicts, f"Khởi tạo ngẫu nhiên (Xung đột: {current_conflicts})"))
         
         for step in range(1, self.max_steps + 1):
             self.steps_count = step
             
             if current_conflicts == 0:
+                final_matrix = self._create_matrix(assignment)
+                self.search_history.append((final_matrix, step, 0, "Đã tìm thấy lời giải hoàn hảo (0 xung đột)!"))
                 return MinConflictsNode(assignment)
                 
-            # Lấy danh sách các cột đang có xung đột
-            conflicted_cols = []
-            for col in range(self.N):
-                if self._conflicts(col, assignment[col], assignment) > 0:
-                    conflicted_cols.append(col)
+            # Lấy danh sách các ô đang có xung đột
+            conflicted_cells = []
+            for cell in self.puzzle_cells:
+                r, c = cell
+                if self._conflicts(r, c, assignment[cell], assignment) > 0:
+                    conflicted_cells.append(cell)
                     
-            if not conflicted_cols:
+            if not conflicted_cells:
+                final_matrix = self._create_matrix(assignment)
+                self.search_history.append((final_matrix, step, 0, "Đã tìm thấy lời giải hoàn hảo (0 xung đột)!"))
                 return MinConflictsNode(assignment)
                 
             # Chọn ngẫu nhiên một biến bị xung đột
-            col = random.choice(conflicted_cols)
+            cell = random.choice(conflicted_cells)
+            r, c = cell
             
             # Tìm giá trị giảm thiểu số xung đột cho biến này
             min_conflicts_val = float('inf')
-            best_rows = []
-            for row in range(self.N):
-                c_val = self._conflicts(col, row, assignment)
+            best_colors = []
+            for color in self.colors:
+                c_val = self._conflicts(r, c, color, assignment)
                 if c_val < min_conflicts_val:
                     min_conflicts_val = c_val
-                    best_rows = [row]
+                    best_colors = [color]
                 elif c_val == min_conflicts_val:
-                    best_rows.append(row)
+                    best_colors.append(color)
                     
             # Chọn ngẫu nhiên trong số các giá trị tốt nhất để phá vỡ thế hòa
-            best_row = random.choice(best_rows)
+            best_color = random.choice(best_colors)
             
-            # Nếu có sự thay đổi, ghi nhận lại để trực quan hóa việc di chuyển
-            if assignment[col] != best_row:
-                matrix_before = self._create_matrix(assignment, active_cell=(assignment[col], col))
-                self.search_history.append((matrix_before, step, current_conflicts, f"Bước {step}: Cột {col} - Hậu dời từ hàng {assignment[col]} đến {best_row}"))
+            color_names = {21: "Xanh lá", 22: "Xanh dương", 23: "Đỏ", 24: "Vàng"}
+            best_color_str = color_names.get(best_color, str(best_color))
+            current_color_str = color_names.get(assignment[cell], str(assignment[cell]))
+
+            # Ghi nhận trạng thái trước khi thay đổi (hoặc giữ nguyên)
+            matrix_before = self._create_matrix(assignment, active_cell=cell)
+            
+            if assignment[cell] != best_color:
+                log_msg = f"Bước {step}: Đã chọn ô ({r},{c}) - Đổi từ {current_color_str} sang {best_color_str}"
+            else:
+                log_msg = f"Bước {step}: Đã chọn ô ({r},{c}) - Giữ nguyên màu {current_color_str} (không có màu tốt hơn)"
                 
-            assignment[col] = best_row
+            self.search_history.append((matrix_before, step, current_conflicts, log_msg))
+                
+            assignment[cell] = best_color
             current_conflicts = self._total_conflicts(assignment)
             
             matrix_after = self._create_matrix(assignment)
@@ -107,7 +139,5 @@ class MinConflicts:
         return node is not None and self._total_conflicts(node.assignment) == 0
 
     def get_path(self, node):
-        if node is None:
-            return []
-        matrix = self._create_matrix(node.assignment)
-        return [(matrix, "DONE")]
+        return []
+

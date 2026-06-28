@@ -1,109 +1,132 @@
 class ForwardCheckingNode:
     def __init__(self, assignment):
-        self.assignment = assignment  # dict of col -> row
+        self.assignment = assignment  # dict of (r, c) -> value
 
 class ForwardChecking:
     """
-    Giải bài toán CSP (ví dụ N-Queens) bằng thuật toán Backtracking kết hợp Forward Checking và MRV heuristic.
+    Giải bài toán CSP (ví dụ Latin Square / Đặt Gem) bằng thuật toán Backtracking kết hợp Forward Checking và MRV heuristic.
     """
     def __init__(self, initial_maze, goal=None):
-        self.N = len(initial_maze)
         self.initial_maze = [row[:] for row in initial_maze]
+        self.rows = len(initial_maze)
+        self.cols = len(initial_maze[0])
         self.search_history = []
         self.assignments_count = 0
         self.backtracks_count = 0
         self.solution_matrix = None
+        
+        # Tìm tọa độ của khung lưới 4x4 (nơi có giá trị 20)
+        self.puzzle_cells = []
+        for r in range(self.rows):
+            for c in range(self.cols):
+                if self.initial_maze[r][c] == 20:
+                    self.puzzle_cells.append((r, c))
+                    
+        self.N = 4 # Kích thước lưới 4x4
+        # Miền giá trị cho mỗi ô (21, 22, 23, 24 tương ứng với Xanh lá, Xanh dương, Đỏ, Vàng)
+        self.colors = [21, 22, 23, 24]
 
-    def _is_consistent(self, col, row, assignment):
-        # Kiểm tra xem việc đặt Hậu tại (row, col) có xung đột với các quân Hậu đã xếp không
-        for c, r in assignment.items():
-            if r == row:  # Trùng hàng
-                return False
-            if abs(r - row) == abs(c - col):  # Trùng đường chéo
-                return False
+    def _is_consistent(self, r, c, val, assignment):
+        # Không trùng màu trên cùng hàng hoặc cùng cột
+        for (ar, ac), aval in assignment.items():
+            if aval == val:
+                if ar == r or ac == c:
+                    return False
         return True
 
     def _create_matrix(self, assignment, active_cell=None, is_failed=False):
-        # Tạo ma trận N x N để hiển thị
-        # 0: Ô trống
-        # 12: Quân Hậu hợp lệ (👑)
-        # 13: Quân Hậu xung đột/thất bại (💥)
-        matrix = [[0 for _ in range(self.N)] for _ in range(self.N)]
+        matrix = [[0 for _ in range(self.cols)] for _ in range(self.rows)]
         
-        for c, r in assignment.items():
-            matrix[r][c] = 12
+        for (r, c), val in assignment.items():
+            matrix[r][c] = val
             
         if active_cell:
             r, c = active_cell
             if is_failed:
-                matrix[r][c] = 13
-            else:
-                matrix[r][c] = 12
+                matrix[r][c] = 6 # Đánh dấu lỗi
         return matrix
 
     def solve(self):
-        # Khởi tạo miền giá trị cho các biến (cột)
-        domains = {col: list(range(self.N)) for col in range(self.N)}
+        if not self.puzzle_cells:
+            print("Không tìm thấy lưới giải đố (giá trị 20) trong bản đồ!")
+            return None
+            
+        # Khởi tạo miền giá trị cho các biến (tọa độ các ô trong lưới)
+        domains = {cell: list(self.colors) for cell in self.puzzle_cells}
         assignment = {}
         
         # Snapshot ban đầu: bàn cờ trống
         empty_matrix = self._create_matrix(assignment)
-        self.search_history.append((empty_matrix, 0, 0))
+        self.search_history.append((empty_matrix, 0, 0, "Bắt đầu Backtracking với Forward Checking"))
 
         result_assignment = self._backtrack(assignment, domains)
         
         if result_assignment is not None:
             self.solution_matrix = self._create_matrix(result_assignment)
+            self.search_history.append((self.solution_matrix, self.assignments_count, self.backtracks_count, "Đã tìm thấy lời giải hoàn hảo!"))
             return ForwardCheckingNode(result_assignment)
         return None
 
     def _backtrack(self, assignment, domains):
-        if len(assignment) == self.N:
+        if len(assignment) == len(self.puzzle_cells):
             return assignment
 
-        # Chọn biến (cột) chưa gán bằng heuristic MRV (Minimum Remaining Values)
-        unassigned = [c for c in range(self.N) if c not in assignment]
-        # Sắp xếp các cột theo kích thước miền giá trị còn lại tăng dần
-        col = min(unassigned, key=lambda c: len(domains[c]))
+        # Chọn biến (ô) chưa gán bằng heuristic MRV (Minimum Remaining Values)
+        unassigned = [cell for cell in self.puzzle_cells if cell not in assignment]
+        cell = min(unassigned, key=lambda c: len(domains[c]))
 
-        # Thử từng giá trị (hàng) trong miền giá trị của cột đó
-        for row in domains[col]:
-            if self._is_consistent(col, row, assignment):
+        r, c = cell
+
+        # Thử từng màu trong miền giá trị của ô đó
+        for color in domains[cell]:
+            if self._is_consistent(r, c, color, assignment):
                 # Thử gán
-                assignment[col] = row
+                assignment[cell] = color
                 self.assignments_count += 1
                 
                 # Snapshot khi gán
-                matrix = self._create_matrix(assignment, active_cell=(row, col))
-                self.search_history.append((matrix, self.assignments_count, self.backtracks_count))
+                color_names = {21: "Xanh lá", 22: "Xanh dương", 23: "Đỏ", 24: "Vàng"}
+                color_str = color_names.get(color, str(color))
+                
+                matrix = self._create_matrix(assignment, active_cell=cell)
+                self.search_history.append((matrix, self.assignments_count, self.backtracks_count, f"Thử gán {color_str} tại ô ({r}, {c})"))
 
                 # Thực hiện Forward Checking
-                new_domains = {c: list(d) for c, d in domains.items()}
-                new_domains[col] = [row]
+                new_domains = {k: list(v) for k, v in domains.items()}
+                new_domains[cell] = [color]
                 
                 fc_failed = False
-                for next_col in range(self.N):
-                    if next_col not in assignment:
-                        # Lọc miền giá trị của next_col: bỏ các hàng bị tấn công bởi (row, col)
-                        filtered = []
-                        for r_val in new_domains[next_col]:
-                            # check if consistent with the new assignment
-                            if r_val != row and abs(r_val - row) != abs(next_col - col):
-                                filtered.append(r_val)
-                        new_domains[next_col] = filtered
+                reduced_count = 0
+                failed_cell = None
+                
+                for next_cell in unassigned:
+                    if next_cell == cell:
+                        continue
                         
-                        # Nếu có cột bị rỗng miền giá trị -> Thất bại Forward Checking
-                        if not filtered:
-                            fc_failed = True
+                    nr, nc = next_cell
+                    # Lọc miền giá trị: nếu next_cell cùng hàng hoặc cột với cell, bỏ màu `color`
+                    if nr == r or nc == c:
+                        if color in new_domains[next_cell]:
+                            new_domains[next_cell].remove(color)
+                            reduced_count += 1
+                            
+                    # Nếu có ô bị rỗng miền giá trị -> Thất bại Forward Checking
+                    if not new_domains[next_cell]:
+                        fc_failed = True
+                        failed_cell = next_cell
+                        break
+                        
+                if reduced_count > 0:
+                    self.search_history.append((matrix, self.assignments_count, self.backtracks_count, f"FC: Loại {color_str} khỏi {reduced_count} ô trống cùng hàng/cột."))
                 
                 if fc_failed:
                     # Ghi nhận snapshot thất bại tại ô này trước khi backtrack
                     self.backtracks_count += 1
-                    failed_matrix = self._create_matrix(assignment, active_cell=(row, col), is_failed=True)
-                    self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count))
+                    failed_matrix = self._create_matrix(assignment, active_cell=failed_cell, is_failed=True)
+                    self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count, f"FC: Ô ({failed_cell[0]}, {failed_cell[1]}) rỗng miền giá trị -> Quay lui!"))
                     
                     # Hủy gán
-                    del assignment[col]
+                    del assignment[cell]
                     continue
 
                 # Nếu không thất bại FC, đi tiếp
@@ -113,18 +136,15 @@ class ForwardChecking:
                 
                 # Nếu nhánh dưới thất bại, backtrack
                 self.backtracks_count += 1
-                failed_matrix = self._create_matrix(assignment, active_cell=(row, col), is_failed=True)
-                self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count))
-                del assignment[col]
+                failed_matrix = self._create_matrix(assignment, active_cell=cell, is_failed=True)
+                self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count, f"Nhánh dưới bế tắc. Quay lui (Backtrack)!"))
+                del assignment[cell]
                 
         return None
 
     def is_goal(self, node):
-        return node is not None and len(node.assignment) == self.N
+        return node is not None and len(node.assignment) == len(self.puzzle_cells)
 
     def get_path(self, node):
-        if node is None:
-            return []
-        # Trả về kết quả cuối cùng để hiển thị đường dẫn kết thúc
-        matrix = self._create_matrix(node.assignment)
-        return [(matrix, "DONE")]
+        return []
+
