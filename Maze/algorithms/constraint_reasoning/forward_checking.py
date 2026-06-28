@@ -15,12 +15,17 @@ class ForwardChecking:
         self.backtracks_count = 0
         self.solution_matrix = None
         
-        # Tìm tọa độ của khung lưới 4x4 (nơi có giá trị 20)
+        # Tìm tọa độ của khung lưới 4x4 (nơi có giá trị 20) và ngọc có sẵn
         self.puzzle_cells = []
+        self.initial_assignment = {}
         for r in range(self.rows):
             for c in range(self.cols):
-                if self.initial_maze[r][c] == 20:
+                val = self.initial_maze[r][c]
+                if val == 20:
                     self.puzzle_cells.append((r, c))
+                elif val in [21, 22, 23, 24]:
+                    self.puzzle_cells.append((r, c))
+                    self.initial_assignment[(r, c)] = val
                     
         self.N = 4 # Kích thước lưới 4x4
         # Miền giá trị cho mỗi ô (21, 22, 23, 24 tương ứng với Xanh lá, Xanh dương, Đỏ, Vàng)
@@ -55,13 +60,22 @@ class ForwardChecking:
             print("Không tìm thấy lưới giải đố (giá trị 20) trong bản đồ!")
             return None
             
-        # Khởi tạo miền giá trị cho các biến (tọa độ các ô trong lưới)
-        domains = {cell: list(self.colors) for cell in self.puzzle_cells}
-        assignment = {}
+        # Khởi tạo miền giá trị cho các biến chưa gán
+        domains = {cell: list(self.colors) for cell in self.puzzle_cells if cell not in self.initial_assignment}
+        assignment = self.initial_assignment.copy()
+        
+        # Lọc miền giá trị ban đầu dựa trên các ngọc có sẵn
+        for (pr, pc), pval in assignment.items():
+            for empty_cell in domains:
+                er, ec = empty_cell
+                if er == pr or ec == pc:
+                    if pval in domains[empty_cell]:
+                        domains[empty_cell].remove(pval)
+                        
         t_end = time.perf_counter()
         self.pure_compute_time += (t_end - t_start)
         
-        # Snapshot ban đầu: bàn cờ trống
+        # Snapshot ban đầu: bàn cờ với các ngọc có sẵn
         empty_matrix = self._create_matrix(assignment)
         self.search_history.append((empty_matrix, 0, 0, "Bắt đầu Backtracking với Forward Checking"))
 

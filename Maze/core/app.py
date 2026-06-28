@@ -180,34 +180,37 @@ class GameApp:
 
         pygame.quit()
 
+    def _trigger_level_complete(self):
+        self.level_completed = True
+        if self.current_level_idx == 0:
+            self.game_ui.show_level_complete("DFS")
+        elif self.current_level_idx == 1:
+            self.game_ui.show_level_complete(["GBFS", "A*"])
+        elif self.current_level_idx == 2:
+            self.game_ui.show_level_complete("Hill Climbing")
+        elif self.current_level_idx == 3:
+            self.game_ui.show_level_complete("Simulated Annealing")
+        elif self.current_level_idx == 4:
+            self.game_ui.show_level_complete("Forward Checking")
+        elif self.current_level_idx == 5:
+            self.game_ui.show_level_complete("Min-Conflicts")
+        elif self.current_level_idx == 6:
+            self.game_ui.show_level_complete("Belief State DFS")
+        elif self.current_level_idx == 7:
+            self.game_ui.show_level_complete("Partially Observable BFS")
+        elif self.current_level_idx == 8:
+            self.game_ui.show_level_complete(["Minimax", "Alpha-Beta"])
+        elif self.current_level_idx == 9:
+            self.game_ui.show_victory_screen()
+        else:
+            self.game_ui.show_level_complete("Trống")
+
     def update_logic(self, keys):
         player_tile = ((self.player.rect.x + self.player.rect.width//2) // SCALED_TILE_SIZE, 
                        (self.player.rect.y + self.player.rect.height//2) // SCALED_TILE_SIZE)
         if not self.level_completed:
             if self.ladder_pos is not None and player_tile == self.ladder_pos:
-                self.level_completed = True
-                if self.current_level_idx == 0:
-                    self.game_ui.show_level_complete("DFS")
-                elif self.current_level_idx == 1:
-                    self.game_ui.show_level_complete(["GBFS", "A*"])
-                elif self.current_level_idx == 2:
-                    self.game_ui.show_level_complete("Hill Climbing")
-                elif self.current_level_idx == 3:
-                    self.game_ui.show_level_complete("Simulated Annealing")
-                elif self.current_level_idx == 4:
-                    self.game_ui.show_level_complete("Forward Checking")
-                elif self.current_level_idx == 5:
-                    self.game_ui.show_level_complete("Min-Conflicts")
-                elif self.current_level_idx == 6:
-                    self.game_ui.show_level_complete("Belief State DFS")
-                elif self.current_level_idx == 7:
-                    self.game_ui.show_level_complete("Partially Observable BFS")
-                elif self.current_level_idx == 8:
-                    self.game_ui.show_level_complete(["Minimax", "Alpha-Beta"])
-                elif self.current_level_idx == 9:
-                    self.game_ui.show_victory_screen()
-                else:
-                    self.game_ui.show_level_complete("Trống")
+                self._trigger_level_complete()
 
     def update_algorithm(self):
         current_time = pygame.time.get_ticks()
@@ -228,13 +231,7 @@ class GameApp:
                     if len(history_item) > 3:
                         self.game_ui.log(history_item[3])
                         if not self.level_completed and "hoàn hảo" in history_item[3]:
-                            self.level_completed = True
-                            if self.active_algorithm == "Forward Checking":
-                                self.game_ui.show_level_complete(["Min-Conflicts"])
-                            elif self.active_algorithm == "Min-Conflicts":
-                                self.game_ui.show_level_complete(["Belief State DFS"])
-                            else:
-                                self.game_ui.show_level_complete("Màn chơi đã hoàn thành!")
+                            self._trigger_level_complete()
                     else:
                         self.game_ui.log(f"Frontier: {history_item[2]}, Reached: {history_item[1]}")
                         
