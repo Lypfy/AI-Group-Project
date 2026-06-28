@@ -161,7 +161,7 @@ class ForwardChecking:
                     self.pure_compute_time += (time.perf_counter() - t_start)
                     
                     failed_matrix = self._create_matrix(assignment, active_cell=failed_cell, is_failed=True)
-                    self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count, f"FC: Ô ({failed_cell[0]}, {failed_cell[1]}) rỗng miền giá trị -> Quay lui!"))
+                    self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count, f"<font color='#FF5555'>FC: Ô ({failed_cell[0]}, {failed_cell[1]}) rỗng miền giá trị -> Quay lui!</font>"))
                     
                     t_start = time.perf_counter()
                     # Hủy gán
@@ -180,7 +180,7 @@ class ForwardChecking:
                 self.pure_compute_time += (time.perf_counter() - t_start)
                 
                 failed_matrix = self._create_matrix(assignment, active_cell=cell, is_failed=True)
-                self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count, f"Nhánh dưới bế tắc. Quay lui (Backtrack)!"))
+                self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count, f"<font color='#FF5555'>Nhánh dưới bế tắc. Quay lui (Backtrack)!</font>"))
                 
                 t_start = time.perf_counter()
                 del assignment[cell]
