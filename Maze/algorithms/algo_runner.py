@@ -100,7 +100,7 @@ def _make_generator(algo_obj, result, algo_name, elapsed_ms):
             yield ("LOG", f"<font color='#00FFFF'>Số lần quay lui: {algo_obj.backtracks_count}</font>")
             yield ("LOG", f"<font color='#00FFFF'>Thời gian chạy: {elapsed_ms:.2f} ms</font>")
         elif algo_name == "Min-Conflicts":
-            yield ("LOG", f"<font color='#00FFFF'>Số biến (ô giải đố): {len(algo_obj.puzzle_cells)}</font>")
+            yield ("LOG", f"<font color='#00FFFF'>Số ô cần giải: {len(algo_obj.puzzle_cells)}</font>")
             yield ("LOG", f"<font color='#00FFFF'>Số bước lặp: {algo_obj.steps_count}</font>")
             yield ("LOG", f"<font color='#00FFFF'>Thời gian chạy: {elapsed_ms:.2f} ms</font>")
         else:
