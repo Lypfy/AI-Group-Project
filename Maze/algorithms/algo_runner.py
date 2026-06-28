@@ -92,13 +92,15 @@ def _make_generator(algo_obj, result, algo_name, elapsed_ms):
                 r, c = algo_obj.get_location(st_matrix)
                 if r is not None and c is not None:
                     xy_path.append((c, r))
-        yield ("PATH", xy_path)
+        if xy_path:
+            yield ("PATH", xy_path)
         
         if algo_name == "Forward Checking":
             yield ("LOG", f"<font color='#00FFFF'>Số phép gán: {algo_obj.assignments_count}</font>")
             yield ("LOG", f"<font color='#00FFFF'>Số lần quay lui: {algo_obj.backtracks_count}</font>")
             yield ("LOG", f"<font color='#00FFFF'>Thời gian chạy: {elapsed_ms:.2f} ms</font>")
         elif algo_name == "Min-Conflicts":
+            yield ("LOG", f"<font color='#00FFFF'>Số biến (ô giải đố): {len(algo_obj.puzzle_cells)}</font>")
             yield ("LOG", f"<font color='#00FFFF'>Số bước lặp: {algo_obj.steps_count}</font>")
             yield ("LOG", f"<font color='#00FFFF'>Thời gian chạy: {elapsed_ms:.2f} ms</font>")
         else:
@@ -116,5 +118,12 @@ def _make_generator(algo_obj, result, algo_name, elapsed_ms):
             yield ("LOG", f"<font color='#00FFFF'>Độ dài đường đi: {path_length}</font>")
             yield ("LOG", f"<font color='#00FFFF'>Thời gian chạy: {elapsed_ms:.2f} ms</font>")
     else:
-        yield ("LOG", "Không tìm thấy kết quả!")
+        if algo_name == "Min-Conflicts":
+            yield ("LOG", "Không tìm thấy kết quả sau tối đa số bước lặp!")
+            yield ("LOG", f"<font color='#00FFFF'>Số biến (ô giải đố): {len(algo_obj.puzzle_cells) if hasattr(algo_obj, 'puzzle_cells') else '?'}</font>")
+            yield ("LOG", f"<font color='#00FFFF'>Số bước lặp: {getattr(algo_obj, 'steps_count', '?')}</font>")
+            yield ("LOG", f"<font color='#00FFFF'>Số xung đột còn lại: {getattr(algo_obj, 'current_conflicts', '?')}</font>")
+            yield ("LOG", f"<font color='#00FFFF'>Thời gian chạy: {elapsed_ms:.2f} ms</font>")
+        else:
+            yield ("LOG", "Không tìm thấy kết quả!")
     yield ("DONE", None)

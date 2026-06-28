@@ -47,6 +47,10 @@ class ForwardChecking:
         return matrix
 
     def solve(self):
+        import time
+        self.pure_compute_time = 0.0
+        
+        t_start = time.perf_counter()
         if not self.puzzle_cells:
             print("Không tìm thấy lưới giải đố (giá trị 20) trong bản đồ!")
             return None
@@ -54,6 +58,8 @@ class ForwardChecking:
         # Khởi tạo miền giá trị cho các biến (tọa độ các ô trong lưới)
         domains = {cell: list(self.colors) for cell in self.puzzle_cells}
         assignment = {}
+        t_end = time.perf_counter()
+        self.pure_compute_time += (t_end - t_start)
         
         # Snapshot ban đầu: bàn cờ trống
         empty_matrix = self._create_matrix(assignment)
@@ -64,11 +70,17 @@ class ForwardChecking:
         if result_assignment is not None:
             self.solution_matrix = self._create_matrix(result_assignment)
             self.search_history.append((self.solution_matrix, self.assignments_count, self.backtracks_count, "Đã tìm thấy lời giải hoàn hảo!"))
+            self.compute_time_ms = self.pure_compute_time * 1000
             return ForwardCheckingNode(result_assignment)
+        
+        self.compute_time_ms = self.pure_compute_time * 1000
         return None
 
     def _backtrack(self, assignment, domains):
+        import time
+        t_start = time.perf_counter()
         if len(assignment) == len(self.puzzle_cells):
+            self.pure_compute_time += (time.perf_counter() - t_start)
             return assignment
 
         # Chọn biến (ô) chưa gán bằng heuristic MRV (Minimum Remaining Values)
@@ -76,13 +88,20 @@ class ForwardChecking:
         cell = min(unassigned, key=lambda c: len(domains[c]))
 
         r, c = cell
+        self.pure_compute_time += (time.perf_counter() - t_start)
 
         # Thử từng màu trong miền giá trị của ô đó
         for color in domains[cell]:
-            if self._is_consistent(r, c, color, assignment):
+            t_start = time.perf_counter()
+            is_cons = self._is_consistent(r, c, color, assignment)
+            self.pure_compute_time += (time.perf_counter() - t_start)
+            
+            if is_cons:
+                t_start = time.perf_counter()
                 # Thử gán
                 assignment[cell] = color
                 self.assignments_count += 1
+                self.pure_compute_time += (time.perf_counter() - t_start)
                 
                 # Snapshot khi gán
                 color_names = {21: "Xanh lá", 22: "Xanh dương", 23: "Đỏ", 24: "Vàng"}
@@ -91,6 +110,7 @@ class ForwardChecking:
                 matrix = self._create_matrix(assignment, active_cell=cell)
                 self.search_history.append((matrix, self.assignments_count, self.backtracks_count, f"Thử gán {color_str} tại ô ({r}, {c})"))
 
+                t_start = time.perf_counter()
                 # Thực hiện Forward Checking
                 new_domains = {k: list(v) for k, v in domains.items()}
                 new_domains[cell] = [color]
@@ -115,18 +135,24 @@ class ForwardChecking:
                         fc_failed = True
                         failed_cell = next_cell
                         break
+                self.pure_compute_time += (time.perf_counter() - t_start)
                         
                 if reduced_count > 0:
                     self.search_history.append((matrix, self.assignments_count, self.backtracks_count, f"FC: Loại {color_str} khỏi {reduced_count} ô trống cùng hàng/cột."))
                 
                 if fc_failed:
+                    t_start = time.perf_counter()
                     # Ghi nhận snapshot thất bại tại ô này trước khi backtrack
                     self.backtracks_count += 1
+                    self.pure_compute_time += (time.perf_counter() - t_start)
+                    
                     failed_matrix = self._create_matrix(assignment, active_cell=failed_cell, is_failed=True)
                     self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count, f"FC: Ô ({failed_cell[0]}, {failed_cell[1]}) rỗng miền giá trị -> Quay lui!"))
                     
+                    t_start = time.perf_counter()
                     # Hủy gán
                     del assignment[cell]
+                    self.pure_compute_time += (time.perf_counter() - t_start)
                     continue
 
                 # Nếu không thất bại FC, đi tiếp
@@ -134,11 +160,17 @@ class ForwardChecking:
                 if result is not None:
                     return result
                 
+                t_start = time.perf_counter()
                 # Nếu nhánh dưới thất bại, backtrack
                 self.backtracks_count += 1
+                self.pure_compute_time += (time.perf_counter() - t_start)
+                
                 failed_matrix = self._create_matrix(assignment, active_cell=cell, is_failed=True)
                 self.search_history.append((failed_matrix, self.assignments_count, self.backtracks_count, f"Nhánh dưới bế tắc. Quay lui (Backtrack)!"))
+                
+                t_start = time.perf_counter()
                 del assignment[cell]
+                self.pure_compute_time += (time.perf_counter() - t_start)
                 
         return None
 

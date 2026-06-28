@@ -106,10 +106,12 @@ class SteepestAscentHillClimbing:
     # ─────────────────────────────────────────────
 
     def solve(self):
+        import time
         current = self.start_node
         trail = [row[:] for row in self.initial_maze]   # vết đi tĩnh
         step = 0
         dn = self._display_name()
+        self.pure_compute_time = 0.0
         
         # Thêm trạng thái ban đầu vào history để thấy được trên UI
         snapshot = [row[:] for row in trail]
@@ -119,12 +121,19 @@ class SteepestAscentHillClimbing:
         self.search_history.append((snapshot, len(self.visited), 0, f"Bắt đầu tại ({cy}, {cx}): {dn}={self._display_val(current.cost_path)}"))
 
         while True:
-            if self.is_goal(current):
+            t_start = time.perf_counter()
+            is_goal = self.is_goal(current)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
+            
+            if is_goal:
                 self.search_history.append((snapshot, len(self.visited), 0, f"Đã đến đích {self.goal}!"))
                 break
 
+            t_start = time.perf_counter()
             moves = self.possible_move(current)
             if not moves:
+                self.pure_compute_time += (time.perf_counter() - t_start)
                 self.search_history.append((snapshot, len(self.visited), 0, f"Không có bước đi tiếp theo. Bị kẹt!"))
                 break
 
@@ -143,6 +152,7 @@ class SteepestAscentHillClimbing:
             eval_str = ", ".join(eval_details)
 
             if best_nxt is None or best_nxt.cost_path >= current.cost_path:
+                self.pure_compute_time += (time.perf_counter() - t_start)
                 msg = f"Đánh giá: {eval_str}. {dn} tốt nhất {self._display_val(best_cost if best_nxt else current.cost_path)} không tốt hơn hiện tại {self._display_val(current.cost_path)}. Dừng."
                 self.search_history.append((snapshot, len(self.visited), 0, msg))
                 break
@@ -153,16 +163,18 @@ class SteepestAscentHillClimbing:
 
             current = best_nxt
             step += 1
+            self.visited.add(self.matrix_to_tuple(current.state))
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
 
             # Snapshot: (matrix, step_count, current_cost)
             snapshot = [row[:] for row in trail]
             cx, cy = self.get_location(current.state)
             if cx is not None:
                 snapshot[cx][cy] = 3
-
-            self.visited.add(self.matrix_to_tuple(current.state))
             
             log_msg = f"Bước {step}: {eval_str}. Chọn {best_nxt.act} tới ({cy},{cx}) ({dn}={self._display_val(best_nxt.cost_path)})"
             self.search_history.append((snapshot, len(self.visited), 0, log_msg))
 
+        self.compute_time_ms = self.pure_compute_time * 1000
         return current

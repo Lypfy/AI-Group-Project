@@ -121,9 +121,11 @@ class SimulatedAnnealing:
     # ─────────────────────────────────────────────
 
     def solve(self):
+        import time
         current = self.start_node
         T = self.T0
         trail = [row[:] for row in self.initial_maze]   # vết đi tĩnh
+        self.pure_compute_time = 0.0
 
         # Lưu trạng thái ban đầu
         snapshot = [row[:] for row in trail]
@@ -133,11 +135,18 @@ class SimulatedAnnealing:
         self.search_history.append((snapshot, len(self.visited), 0, f"Start: {self._display_name()}={self._display_val(current.cost_path)}, T={T:.2f}"))
 
         while T > self.Tmin:
-            if self.is_goal(current):
+            t_start = time.perf_counter()
+            is_goal = self.is_goal(current)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
+            
+            if is_goal:
                 break
 
+            t_start = time.perf_counter()
             moves = self.possible_move(current)
             if not moves:
+                self.pure_compute_time += (time.perf_counter() - t_start)
                 break
 
             m = random.choice(moves)
@@ -157,16 +166,19 @@ class SimulatedAnnealing:
                 if trail[px][py] != 3:
                     trail[px][py] = 6
                 current = nxt
+                
+            self.visited.add(self.matrix_to_tuple(current.state))
+            T *= self.alpha
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
 
             # Snapshot: (matrix, T, deltaE, prob, accepted)
             snapshot = [row[:] for row in trail]
             cx, cy = self.get_location(current.state)
             if cx is not None:
                 snapshot[cx][cy] = 3
-
-            self.visited.add(self.matrix_to_tuple(current.state))
             
-            log_msg = f"T={T:.4f}, {self._display_name()}={self._display_val(current.cost_path)}, P={prob:.4f}, Accept={accepted}"
+            log_msg = f"T={T/self.alpha:.4f}, {self._display_name()}={self._display_val(current.cost_path)}, P={prob:.4f}, Accept={accepted}"
             self.search_history.append((
                 snapshot,
                 len(self.visited),
@@ -174,6 +186,5 @@ class SimulatedAnnealing:
                 log_msg
             ))
 
-            T *= self.alpha
-
+        self.compute_time_ms = self.pure_compute_time * 1000
         return current

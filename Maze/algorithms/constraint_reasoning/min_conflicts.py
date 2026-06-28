@@ -57,11 +57,15 @@ class MinConflicts:
         return total // 2
 
     def solve(self):
+        import time
+        pure_compute_time = 0.0
+        
         if not self.puzzle_cells:
             print("Không tìm thấy lưới giải đố trong bản đồ!")
             return None
             
         # Khởi tạo trạng thái ban đầu
+        t_start = time.perf_counter()
         assignment = {}
         for cell in self.puzzle_cells:
             if cell in self.initial_assignment:
@@ -69,18 +73,24 @@ class MinConflicts:
             else:
                 assignment[cell] = random.choice(self.colors)
                 
-        current_conflicts = self._total_conflicts(assignment)
+        self.current_conflicts = self._total_conflicts(assignment)
+        t_end = time.perf_counter()
+        pure_compute_time += (t_end - t_start)
         
         # Ghi nhận khởi tạo
         matrix = self._create_matrix(assignment)
-        self.search_history.append((matrix, 0, current_conflicts, f"Khởi tạo ngẫu nhiên (Xung đột: {current_conflicts})"))
+        self.search_history.append((matrix, 0, self.current_conflicts, f"Khởi tạo ngẫu nhiên (Xung đột: {self.current_conflicts})"))
         
         for step in range(1, self.max_steps + 1):
             self.steps_count = step
             
-            if current_conflicts == 0:
+            t_start = time.perf_counter()
+            if self.current_conflicts == 0:
+                t_end = time.perf_counter()
+                pure_compute_time += (t_end - t_start)
                 final_matrix = self._create_matrix(assignment)
                 self.search_history.append((final_matrix, step, 0, "Đã tìm thấy lời giải hoàn hảo (0 xung đột)!"))
+                self.compute_time_ms = pure_compute_time * 1000
                 return MinConflictsNode(assignment)
                 
             # Lấy danh sách các ô đang có xung đột
@@ -91,8 +101,11 @@ class MinConflicts:
                     conflicted_cells.append(cell)
                     
             if not conflicted_cells:
+                t_end = time.perf_counter()
+                pure_compute_time += (t_end - t_start)
                 final_matrix = self._create_matrix(assignment)
                 self.search_history.append((final_matrix, step, 0, "Đã tìm thấy lời giải hoàn hảo (0 xung đột)!"))
+                self.compute_time_ms = pure_compute_time * 1000
                 return MinConflictsNode(assignment)
                 
             # Chọn ngẫu nhiên một biến bị xung đột
@@ -112,6 +125,8 @@ class MinConflicts:
                     
             # Chọn ngẫu nhiên trong số các giá trị tốt nhất để phá vỡ thế hòa
             best_color = random.choice(best_colors)
+            t_end = time.perf_counter()
+            pure_compute_time += (t_end - t_start)
             
             color_names = {21: "Xanh lá", 22: "Xanh dương", 23: "Đỏ", 24: "Vàng"}
             best_color_str = color_names.get(best_color, str(best_color))
@@ -125,14 +140,18 @@ class MinConflicts:
             else:
                 log_msg = f"Bước {step}: Đã chọn ô ({r},{c}) - Giữ nguyên màu {current_color_str} (không có màu tốt hơn)"
                 
-            self.search_history.append((matrix_before, step, current_conflicts, log_msg))
+            self.search_history.append((matrix_before, step, self.current_conflicts, log_msg))
                 
+            t_start = time.perf_counter()
             assignment[cell] = best_color
-            current_conflicts = self._total_conflicts(assignment)
+            self.current_conflicts = self._total_conflicts(assignment)
+            t_end = time.perf_counter()
+            pure_compute_time += (t_end - t_start)
             
             matrix_after = self._create_matrix(assignment)
-            self.search_history.append((matrix_after, step, current_conflicts, f"   -> Xung đột hiện tại: {current_conflicts}"))
+            self.search_history.append((matrix_after, step, self.current_conflicts, f"   -> Xung đột hiện tại: {self.current_conflicts}"))
             
+        self.compute_time_ms = pure_compute_time * 1000
         return None
 
     def is_goal(self, node):

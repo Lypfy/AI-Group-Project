@@ -74,19 +74,30 @@ class BeliefStateDFS:
         return path
 
     def solve(self):
+        import time
+        self.pure_compute_time = 0.0
+        
+        t_start = time.perf_counter()
         frontier = deque([self.start_node])
         explored = set()
         explored.add(self.start_node.belief_state)
         
         all_explored_positions = set(self.start_node.belief_state)
+        t_end = time.perf_counter()
+        self.pure_compute_time += (t_end - t_start)
         
         while frontier:
+            t_start = time.perf_counter()
             if len(explored) > 2500:
-                print("Đạt giới hạn Belief State DFS (2500 trạng thái). Dừng lại để tránh treo máy.")
                 self.explored_count = len(explored)
+                self.pure_compute_time += (time.perf_counter() - t_start)
+                print("Đạt giới hạn Belief State DFS (2500 trạng thái). Dừng lại để tránh treo máy.")
+                self.compute_time_ms = self.pure_compute_time * 1000
                 return None
                 
             current_node = frontier.pop()
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
             
             # Tracker matrix for rendering
             tracker = [[0 for _ in range(self.cols)] for _ in range(self.rows)]
@@ -103,20 +114,30 @@ class BeliefStateDFS:
             if len(self.search_history) < 2000:
                 self.search_history.append((tracker, len(explored), len(frontier), log_msg))
 
-            if self.is_goal(current_node):
+            t_start = time.perf_counter()
+            is_goal = self.is_goal(current_node)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
+
+            if is_goal:
                 log_msg = f"<font color='#00FF00'>Đã tìm thấy kế hoạch chắc chắn (100% đến đích).</font>"
                 final_tracker = [[0 for _ in range(self.cols)] for _ in range(self.rows)]
                 for (ex, ey) in all_explored_positions: final_tracker[ex][ey] = 6
                 final_tracker[self.goal[0]][self.goal[1]] = 5
                 self.search_history.append((final_tracker, len(explored), len(frontier), log_msg))
                 self.explored_count = len(explored)
+                self.compute_time_ms = self.pure_compute_time * 1000
                 return current_node
 
+            t_start = time.perf_counter()
             for m in ["up", "down", "left", "right"]:
                 child = self._do_move_belief(current_node, m)
                 if child.belief_state not in explored:
                     explored.add(child.belief_state)
                     frontier.append(child)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
 
         self.explored_count = len(explored)
+        self.compute_time_ms = self.pure_compute_time * 1000
         return None

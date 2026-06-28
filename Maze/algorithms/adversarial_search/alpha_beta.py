@@ -187,40 +187,66 @@ class AlphaBeta:
         return path
 
     def solve(self):
+        import time
+        self.pure_compute_time = 0.0
+        
+        t_start = time.perf_counter()
         tracker = [row[:] for row in self.initial_maze]
         current_node = Node(tracker, None, "START", 0)
+        t_end = time.perf_counter()
+        self.pure_compute_time += (t_end - t_start)
+        
         self.search_history.append(([row[:] for row in tracker], self.explored_count, 0, "<font color='#00FFFF'>[Alpha-Beta]</font> Bắt đầu mô phỏng cắt tỉa..."))
 
         for step in range(100):
-            if self.is_goal(current_node):
+            t_start = time.perf_counter()
+            is_goal = self.is_goal(current_node)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
+            
+            if is_goal:
                 self.search_history.append(([row[:] for row in current_node.state], self.explored_count, 0, "<font color='#FFFF00'>[Thành công]</font> Đã trốn thoát an toàn!"))
+                self.compute_time_ms = self.pure_compute_time * 1000
                 return current_node
                 
+            t_start = time.perf_counter()
             max_pos = self.get_location(current_node.state, 3)
             min_pos = self.get_location(current_node.state, 4)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
             
             if not max_pos or (min_pos and max_pos == min_pos):
                 self.search_history.append(([row[:] for row in current_node.state], self.explored_count, 0, "<font color='#FF0000'>[Thất bại]</font> Người chơi đã bị quái vật bắt!"))
                 break
 
             # MAX turn
+            t_start = time.perf_counter()
             val, best_move = self.alphabeta(self.max_depth, -float('inf'), float('inf'), True, current_node.state)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
+            
             if not best_move:
                 self.search_history.append(([row[:] for row in current_node.state], self.explored_count, 0, "<font color='#FF0000'>[Thất bại]</font> Người chơi bị kẹt đường!"))
                 break
                 
+            t_start = time.perf_counter()
             current_max_pos = self.get_location(current_node.state, 3)
             new_state = self.apply_move(current_node.state, best_move, 3)
             new_max_pos = self.get_location(new_state, 3)
             current_node = Node(new_state, current_node, best_move, current_node.depth + 1)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
             
             dir_vn = self.translate_dir(best_move)
             if val >= 10000:
                 log_msg = f"<font color='#00FF00'>[Player]</font> Đi <b>{dir_vn}</b> (Tìm thấy đích! Điểm: {round(val, 1)})"
             else:
                 if new_max_pos:
+                    t_start = time.perf_counter()
                     old_dist = self.manhattan(current_max_pos, self.goal)
                     new_dist = self.manhattan(new_max_pos, self.goal)
+                    t_end = time.perf_counter()
+                    self.pure_compute_time += (t_end - t_start)
                     if new_dist < old_dist:
                         bonus = "<font color='#00FF00'>+1 Tới gần đích</font>"
                     else:
@@ -231,24 +257,45 @@ class AlphaBeta:
                 
             self.search_history.append(([row[:] for row in current_node.state], self.explored_count, 0, log_msg))
             
-            if self.is_goal(current_node):
+            t_start = time.perf_counter()
+            is_goal = self.is_goal(current_node)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
+            
+            if is_goal:
                 self.search_history.append(([row[:] for row in current_node.state], self.explored_count, 0, "<font color='#FFFF00'>[Thành công]</font> Đã trốn thoát an toàn!"))
+                self.compute_time_ms = self.pure_compute_time * 1000
                 return current_node
 
             # MIN turn
+            t_start = time.perf_counter()
             current_min_pos = self.get_location(current_node.state, 4)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
+            
             if current_min_pos:
+                t_start = time.perf_counter()
                 val, best_min_move = self.alphabeta(self.max_depth, -float('inf'), float('inf'), False, current_node.state)
+                t_end = time.perf_counter()
+                self.pure_compute_time += (t_end - t_start)
+                
                 if best_min_move:
+                    t_start = time.perf_counter()
                     current_max_pos = self.get_location(current_node.state, 3)
                     new_state = self.apply_move(current_node.state, best_min_move, 4)
                     new_min_pos = self.get_location(new_state, 4)
                     current_node = Node(new_state, current_node, best_min_move, current_node.depth + 1)
+                    t_end = time.perf_counter()
+                    self.pure_compute_time += (t_end - t_start)
+                    
                     dir_min_vn = self.translate_dir(best_min_move)
                     
                     if current_max_pos and new_min_pos:
+                        t_start = time.perf_counter()
                         old_dist_min = self.manhattan(current_max_pos, current_min_pos)
                         new_dist_min = self.manhattan(current_max_pos, new_min_pos)
+                        t_end = time.perf_counter()
+                        self.pure_compute_time += (t_end - t_start)
                         if new_dist_min < old_dist_min:
                             penalty = "<font color='#FF0000'>-0.5 Áp sát</font>"
                         else:
@@ -258,6 +305,12 @@ class AlphaBeta:
                         
                     self.search_history.append(([row[:] for row in current_node.state], self.explored_count, 0, f"<font color='#FF4444'>[Monster]</font> Đuổi theo <b>{dir_min_vn}</b> ({penalty} | Điểm: {round(val, 1)})"))
                     
-        if self.is_goal(current_node):
+        t_start = time.perf_counter()
+        is_goal = self.is_goal(current_node)
+        t_end = time.perf_counter()
+        self.pure_compute_time += (t_end - t_start)
+        
+        self.compute_time_ms = self.pure_compute_time * 1000
+        if is_goal:
             return current_node
         return None

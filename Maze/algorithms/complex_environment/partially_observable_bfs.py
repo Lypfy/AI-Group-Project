@@ -103,18 +103,29 @@ class PartiallyObservableBFS:
         return path
 
     def solve(self):
+        import time
+        self.pure_compute_time = 0.0
+        
+        t_start = time.perf_counter()
         frontier = deque([self.start_node])
         explored = set()
         explored.add((self.start_node.actual_state, self.start_node.belief_state))
         all_explored_positions = set(self.start_node.belief_state)
+        t_end = time.perf_counter()
+        self.pure_compute_time += (t_end - t_start)
         
         while frontier:
+            t_start = time.perf_counter()
             if len(explored) > 2500:
-                print("Đạt giới hạn Belief State BFS (2500 trạng thái). Dừng lại để tránh treo máy.")
                 self.explored_count = len(explored)
+                self.pure_compute_time += (time.perf_counter() - t_start)
+                print("Đạt giới hạn Belief State BFS (2500 trạng thái). Dừng lại để tránh treo máy.")
+                self.compute_time_ms = self.pure_compute_time * 1000
                 return None
                 
             current_node = frontier.popleft()
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
 
             tracker = [[0 for _ in range(self.cols)] for _ in range(self.rows)]
             for (ex, ey) in all_explored_positions:
@@ -133,15 +144,22 @@ class PartiallyObservableBFS:
             if len(self.search_history) < 2000:
                 self.search_history.append((tracker, len(explored), len(frontier), log_msg))
 
-            if self.is_goal(current_node):
+            t_start = time.perf_counter()
+            is_goal = self.is_goal(current_node)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
+
+            if is_goal:
                 log_msg = f"<font color='#00FF00'>Đã đến đích và chắc chắn 100%!</font>"
                 final_tracker = [[0 for _ in range(self.cols)] for _ in range(self.rows)]
                 for (ex, ey) in all_explored_positions: final_tracker[ex][ey] = 6
                 final_tracker[self.goal[0]][self.goal[1]] = 5
                 self.search_history.append((final_tracker, len(explored), len(frontier), log_msg))
                 self.explored_count = len(explored)
+                self.compute_time_ms = self.pure_compute_time * 1000
                 return current_node
 
+            t_start = time.perf_counter()
             for action in ["up", "down", "left", "right"]:
                 child = self._transition(current_node, action)
                 
@@ -151,7 +169,10 @@ class PartiallyObservableBFS:
                     frontier.append(child)
                     for pos in child.belief_state:
                         all_explored_positions.add(pos)
+            t_end = time.perf_counter()
+            self.pure_compute_time += (t_end - t_start)
 
         self.explored_count = len(explored)
+        self.compute_time_ms = self.pure_compute_time * 1000
         return None
 
