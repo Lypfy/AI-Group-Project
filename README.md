@@ -1,73 +1,147 @@
-# 🎥 Algorithm Gallery
+# 🎬 Algorithm Demonstrations
 
-<table>
+The following GIFs demonstrate the execution process of each implemented search algorithm.
 
+---
+
+## 📚 Uninformed Search
+
+<table align="center">
 <tr>
 <td align="center">
-<b>BFS</b><br>
-<img src="gif/uninform/bfs.gif" width="250">
+
+### Breadth-First Search (BFS)
+
+<img src="./gif/uninform/bfs.gif" width="420">
+
 </td>
 
 <td align="center">
-<b>DFS</b><br>
-<img src="gif/uninform/dfs.gif" width="250">
-</td>
 
-<td align="center">
-<b>Greedy</b><br>
-<img src="gif/inform/greedy.gif" width="250">
+### Depth-First Search (DFS)
+
+<img src="./gif/uninform/dfs.gif" width="420">
+
 </td>
 </tr>
+</table>
 
+---
+
+## 🎯 Informed Search
+
+<table align="center">
 <tr>
 <td align="center">
-<b>A*</b><br>
-<img src="gif/inform/a_star.gif" width="250">
+
+### Greedy Best-First Search
+
+<img src="./gif/inform/greedy.gif" width="420">
+
 </td>
 
 <td align="center">
-<b>Hill Climbing</b><br>
-<img src="gif/local/hill_climb.gif" width="250">
-</td>
 
-<td align="center">
-<b>Annealing</b><br>
-<img src="gif/local/annealing.gif" width="250">
+### A* Search
+
+<img src="./gif/inform/a_star.gif" width="420">
+
 </td>
 </tr>
+</table>
 
+---
+
+## 🏔️ Local Search
+
+<table align="center">
 <tr>
 <td align="center">
-<b>Belief State</b><br>
-<img src="gif/complex_environment/belief_state.gif" width="250">
+
+### Hill Climbing
+
+<img src="./gif/local/hill_climb.gif" width="420">
+
 </td>
 
 <td align="center">
-<b>Partially Observable</b><br>
-<img src="gif/complex_environment/partially.gif" width="250">
-</td>
 
-<td align="center">
-<b>Forward Checking</b><br>
-<img src="gif/csp/forward_checking.gif" width="250">
+### Simulated Annealing
+
+<img src="./gif/local/annealing.gif" width="420">
+
 </td>
 </tr>
+</table>
 
+---
+
+## 🌍 Complex Environment Search
+
+<table align="center">
 <tr>
 <td align="center">
-<b>Min Conflict</b><br>
-<img src="gif/csp/min_conflict.gif" width="250">
+
+### Belief State DFS
+
+<img src="./gif/complex_environment/belief_state.gif" width="420">
+
 </td>
 
 <td align="center">
-<b>Alpha Beta</b><br>
-<img src="gif/adversarial/alpha_beta.gif" width="250">
-</td>
 
-<td align="center">
-<b>Minimax</b><br>
-<img src="gif/adversarial/minimax.gif" width="250">
+### Partially Observable BFS
+
+<img src="./gif/complex_environment/partially.gif" width="420">
+
 </td>
 </tr>
+</table>
 
+---
+
+## 🧩 Constraint Satisfaction Problems (CSP)
+
+<table align="center">
+<tr>
+<td align="center">
+
+### Forward Checking
+
+<img src="./gif/csp/forward_checking.gif" width="420">
+
+</td>
+
+<td align="center">
+
+### Min-Conflict
+
+<img src="./gif/csp/min_conflict.gif" width="420">
+
+</td>
+</tr>
+</table>
+
+---
+
+## ♟️ Adversarial Search
+
+<table align="center">
+<tr>
+<td align="center">
+
+### Alpha-Beta Pruning
+
+<img src="./gif/adversarial/alpha_beta.gif" width="420">
+
+</td>
+
+<td align="center">
+
+### Minimax
+
+<img src="./gif/adversarial/minimax.gif" width="420">
+
+</td>
+</tr>
 </table>
