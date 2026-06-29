@@ -1,6 +1,6 @@
 # 🎬 Algorithm Demonstrations
 
-The following GIFs demonstrate the execution process of each implemented search algorithm.
+Các ảnh GIF dưới đây minh họa quá trình thực thi của từng thuật toán tìm kiếm đã được cài đặt.
 
 ---
 
